@@ -9,10 +9,8 @@
     "vega-embed": "^3.0.0"
   },
   "scripts": {
-    "build-css": "node-sass style.scss ./dist/style.css",
     "watch": "cross-env NODE_ENV=development parcel --dist-dir dist index.html --open --no-hmr --public-url /",
     "build": "cross-env NODE_ENV=production parcel build --no-scope-hoist index.html --public-url ./",
-    "train": "node -r ts-node/register translation.ts --artifacts_dir dist/resources",
     "link-local": "yalc link"
   },
   "devDependencies": {

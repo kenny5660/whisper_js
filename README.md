@@ -7,7 +7,7 @@ Now Project based on tfjs example [English-French Translation](https://github.co
 
 ## Live DEMO
 
-[GitHubPages demo]()
+[GitHubPages demo](https://kenny5660.github.io/whisper_js/)
 ## Launch DEMO localy
 
 To launch the demo localy, do
