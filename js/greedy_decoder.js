@@ -1,6 +1,6 @@
 const tf = require('@tensorflow/tfjs')
 
-function CTCGreedyDecoder(logits, blankLabel = 0, mergeRepeated = true) {
+function CTCGreedyDecoder(logits, blankLabel = null, mergeRepeated = true) {
     let maxScores = tf.argMax(logits, 2).transpose()
     let tensor = maxScores.arraySync();
     let decodes = [];
@@ -8,7 +8,7 @@ function CTCGreedyDecoder(logits, blankLabel = 0, mergeRepeated = true) {
         let decode = [];
         for (let j = 0; j < batch.length; j++) {
             let index = batch[j];
-            if (index !== blankLabel) {
+            if (blankLabel === null || index !== blankLabel) {
                 if (mergeRepeated && j !== 0 && index === batch[j - 1]) {
                     continue;
                 }
