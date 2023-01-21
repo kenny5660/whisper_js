@@ -1,50 +1,97 @@
-import * as tf from '@tensorflow/tfjs';
-
-
-class BeamSearchDecoderLayer extends tf.layers.Layer {
-    constructor(kwargs) {
-        super(kwargs);
-        this.beamWidth = kwargs.beamWidth;
-        this.topPaths = kwargs.topPaths;
+class BeamEntry {
+    constructor(parent, label, beam_root) {
+        this.parent = parent;
+        this.label = label;
+        this.children = new Map();
+        this.oldp = {
+            total: kLogZero,
+            blank: kLogZero,
+            label: kLogZero
+        };
+        this.newp = {
+            total: kLogZero,
+            blank: kLogZero,
+            label: kLogZero
+        };
     }
 
-    static get className() {
-        return 'BeamSearchDecoderLayer';
+    Active() {
+        return this.newp.total !== kLogZero;
     }
 
-    call(inputs, kwargs) {
-        const logits = inputs;
-        const decoder = new BeamSearchDecoderLayer(kwargs);
-        for (let i = 0; i < logits[0].length; i++) {
-            decoder.addHypothesis([i], logits[0][i]);
+    GetChild(ind) {
+        let child_entry = this.children.get(ind);
+        if (!child_entry) {
+            child_entry = new BeamEntry(this, ind, beam_root);
+            this.children.set(ind, child_entry);
         }
-        for (let t = 1; t < logits.length; t++) {
-            const newHypotheses = [];
-            const newProbs = [];
-            for (let i = 0; i < decoder.getHypotheses().length; i++) {
-                const hyp = decoder.getHypotheses()[i];
-                const prob = decoder.getProbabilities()[i];
-                for (let j = 0; j < logits[t].length; j++) {
-                    newHypotheses.push(hyp.concat(j));
-                    newProbs.push(prob * logits[t][j]);
-                }
+        return child_entry;
+    }
+
+    LabelSeq(merge_repeated) {
+        let labels = [];
+        let prev_label = -1;
+        let c = this;
+        while (c.parent) {
+            if (!merge_repeated || c.label !== prev_label) {
+                labels.push(c.label);
             }
-            for (let i = 0; i < newHypotheses.length; i++) {
-                decoder.addHypothesis(newHypotheses[i], newProbs[i]);
+            prev_label = c.label;
+            c = c.parent;
+        }
+        return labels.reverse();
+    }
+}
+
+
+class CTCBeamSearchDecoder {
+    constructor(num_classes, beam_width, scorer, batch_size = 1, merge_repeated = false) {
+        this.num_classes = num_classes;
+        this.beam_width = beam_width;
+        this.scorer = scorer;
+        this.batch_size = batch_size;
+        this.merge_repeated = merge_repeated;
+        this.leaves = new Array(beam_width);
+        this.Reset();
+    }
+
+    Decode(seq_len, input, output, scores) {
+        this.Reset();
+        for (let t = 0; t < seq_len; t++) {
+            this.Step(input[t]);
+        }
+        return this.scorer.GetTopPaths(output, scores);
+    }
+
+    Step(log_input_t) {
+        let new_beam = [];
+        for (let hyp of this.beam) {
+            for (let idx = 0; idx < this.num_classes; idx++) {
+                new_beam.push(hyp.Extend(idx, log_input_t[idx]));
             }
         }
-        return decoder.getHypotheses();
+        this.beam = this.scorer.ScoreBeam(new_beam);
     }
 
-    getProbabilities() {
+    Reset() {
+        this.beam = new Array(this.beam_width);
+        for (let i = 0; i < this.beam_width; i++) {
+            this.beam[i] = new BeamEntry(0, 1.0, []);
+        }
+    }
+}
 
+class DefaultBeamScorer {
+    constructor(beam_width) {
+        this.beam_width = beam_width;
     }
 
-    getHypotheses() {
-
+    ScoreBeam(beam) {
+        beam.sort((a, b) => b.log_prob - a.log_prob);
+        return beam.slice(0, this.beam_width);
     }
 
-    addHypothesis(numbers, logitElement) {
-
+    GetTopPaths(output, scores) {
+        // Code to get top paths and scores
     }
 }
