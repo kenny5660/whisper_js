@@ -1,31 +1,43 @@
+import h5wasm from "h5wasm";
 import * as tf from '@tensorflow/tfjs';
-import * as ui from './ui';
 
+class Weights {
 
-export async function urlExists(url) {
-  ui.status('Testing url ' + url);
-  try {
-    const response = await fetch(url, {method: 'HEAD'});
-    return response.ok;
-  } catch (err) {
-    return false;
-  }
-}
+    static _MODELS = {
+        "tiny.en": "https://raw.githubusercontent.com/kenny5660/whisper_js/weights/tiny.en.h5",
+        "tiny": "",
+        "base.en": "",
+        "base": "",
+        "small.en": "",
+        "small": "",
+        "medium.en": "",
+        "medium": "",
+        "large": ""
+    }
+    
+    constructor(model_name) {
+        this.init_(model_name);
+    }
 
-/**
- * Load metadata file stored at a remote URL.
- *
- * @return An object containing metadata as key-value pairs.
- */
-export async function loadHostedMetadata(url) {
-  ui.status('Loading metadata from ' + url);
-  try {
-    const metadataJson = await fetch(url);
-    const metadata = await metadataJson.json();
-    ui.status('Done loading metadata.');
-    return metadata;
-  } catch (err) {
-    console.error(err);
-    ui.status('Loading metadata failed.');
-  }
+    async init_(model_name) {
+        const { FS } = await h5wasm.ready;
+
+        let model_url = this._MODELS[model_name];
+
+        let response = await fetch(model_url);
+        let ab = await response.arrayBuffer();
+
+        FS.writeFile("weights.h5", new Uint8Array(ab));
+
+        this.weights = new h5wasm.File("weights.h5", "r");
+    }
+
+    get(key) {
+        let data_key = this.weights.get('model_state_dict').get(key);
+        return tf.tensor(data_key.value, data_key.shape);
+    }
+
+    static available_models() {
+        return Object.keys(_MODELS);
+    }
 }
