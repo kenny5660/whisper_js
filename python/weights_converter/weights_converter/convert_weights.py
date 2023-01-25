@@ -22,11 +22,13 @@ _MODELS = {
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description='')
 parser.add_argument("--model", default="tiny", choices=_MODELS, help="name of the Whisper model to convert")
 parser.add_argument("--local_path", "-l", help="get weights from local directory")
+parser.add_argument("--compression", "-c", default="lzf", help="")
 parser.add_argument("--output_dir", help="directory to save the converted weights")
 
 args = parser.parse_args().__dict__
 model_name = args.pop("model")
 local_path = args.pop("local_path")
+compression = args.pop("compression")
 output_dir = args["output_dir"]
 
 converted_output_dir = args["output_dir"]
@@ -38,13 +40,13 @@ else:
     output_dir = f"./{model_name}.pt"
     converted_output_dir = f"./{model_name}.h5"
 
+if os.path.exists(output_dir):
+    warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
+
 if local_path:
     weights = torch.load(local_path)
     converted_output_dir = f"./{os.path.split(local_path)[1][:-3]}.h5"
 else:
-    if os.path.exists(output_dir):
-        warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
-
     with urllib.request.urlopen(_MODELS[model_name]) as source, open(output_dir, "wb") as output:
         with tqdm(total=int(source.info().get("Content-Length")), ncols=80, unit='iB', unit_scale=True, unit_divisor=1024) as loop:
             while True:
@@ -80,4 +82,4 @@ with h5py.File(converted_output_dir, 'w') as f:
         group_1.create_dataset(f'{key}', data=weights['dims'][key])
     
     for key in weights['model_state_dict'].keys():
-        group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32))
+        group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32), compression=compression)
