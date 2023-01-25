@@ -1,30 +1,39 @@
 const tf = require('@tensorflow/tfjs')
 
-function CTCGreedyDecoder(logits, blankLabel = null, mergeRepeated = true) {
-    let maxScores = tf.argMax(logits, 2).transpose()
-    let tensor = maxScores.arraySync();
-    let decodes = [];
-    for (let batch of tensor) {
-        let decode = [];
-        for (let j = 0; j < batch.length; j++) {
-            let index = batch[j];
-            if (blankLabel === null || index !== blankLabel) {
-                if (mergeRepeated && j !== 0 && index === batch[j - 1]) {
-                    continue;
-                }
-                decode.push(index);
-            }
-        }
-        decodes.push(decode);
+class GreedyDecoder {
+    constructor(temperature, eot) {
+        this.temperature = temperature;
+        this.eot = eot;
+        this.sumLogprobs = sumLogprobs;
     }
-    return decodes;
+
+    update(tokens, logits) {
+        let nextTokens;
+        if (this.temperature === 0) {
+            nextTokens = tf.argMax(logits, -1);
+        } else {
+            nextTokens = tf.multinomial(logits.div(this.temperature), 1);
+        }
+
+        const logprobs = tf.logSoftmax(logits);
+        const currentLogprobs = tf.gather(logprobs, nextTokens, -1);
+        const tokensLastShapeIndex = tokens.shape.length - 1
+        this.sumLogprobs = this.sumLogprobs.add(
+            currentLogprobs.mul(tf.notEqual(tokens.slice(tokensLastShapeIndex), this.eot))
+        );
+        nextTokens = tf.where(
+            tf.equal(tokens.slice(tokensLastShapeIndex), this.eot).transpose(),
+            tf.zerosLike(nextTokens).add(this.eot), nextTokens
+        );
+        tokens = tokens.concat(nextTokens, -1);
+
+        const completed = tf.equal(tokens.slice(tokensLastShapeIndex), this.eot).all()
+        return [tokens, completed];
+    }
+
+    finalize(tokens) {
+        tokens = tokens.concat(tf.fill([tokens.shape[0], 1], this.eot), 1);
+        // tokens = tf.pad(tokens, [[0, 1]], this.eot)
+        return [tokens, this.sumLogprobs.dataSync()];
+    }
 }
-
-let T = 2;
-let C = 5;
-let N = 6;
-
-let logits = tf.randomUniform([T, N, C]);
-console.log(logits.arraySync())
-let output = CTCGreedyDecoder(logits);
-console.log(output);
