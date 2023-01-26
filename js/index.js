@@ -23,15 +23,15 @@ import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
 
 const MODELS_URL = {
-    "tiny.en": "https://raw.githubusercontent.com/kenny5660/whisper_js/weights/tiny.en.h5",
-    "tiny": "http://localhost:1234/tiny.h5",
-    "base.en": "https://dfdf",
-    "base": "",
-    "small.en": "",
-    "small": "",
-    "medium.en": "",
-    "medium": "",
-    "large": ""
+    "tiny.en": "tiny.en.h5",
+    "tiny": "tiny.h5",
+    "base.en": "base.en.h5",
+    "base": "base.h5",
+    "small.en": "small.en.h5",
+    "small": "small.h5",
+    "medium.en": "medium.en.h5",
+    "medium": "medium.h5",
+    "large": "large.h5"
 }
 class App{
 
