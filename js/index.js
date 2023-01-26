@@ -17,7 +17,7 @@
 
 import * as tf from '@tensorflow/tfjs';
 import fetchProgress from "fetch-progress"
-import {formatBytes} from "format-bytes"
+import formatBytes from "format-bytes"
 import { Weights } from './Weights';
 import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
@@ -43,15 +43,13 @@ class App{
         this.gui_model_progressbar = document.getElementById("model-progressbar");
         this.gui_model_status = document.getElementById("model-status");
         this.gui_select_model.onchange = () => this.onchangeSelectModel(this.gui_select_model)
-        self.mdlProgressInitDone = false;
-        this.counter = 0;
+        this.mdlProgressInitDone = false;
+        let self = this;
         this.gui_model_progressbar.addEventListener('mdl-componentupgraded', function () {
             console.log("componentupgraded");
             this.MaterialProgress.setProgress(0);
             self.mdlProgressInitDone = true;
           });
-        this.gui_model_progressbar.nativeElement.MaterialProgress.setProgress(this.this.counter++)
-        
     }
     
     onchangeSelectModel(obj) {
@@ -59,13 +57,15 @@ class App{
         this.current_model_name = obj.value;
         this.downloadModel();
     }
-    updateProgressBar(self,progress) {
+    updateProgressBar(self, progress) {
+        const status_text = `Downloading ${self.current_model_name} ${formatBytes(progress.transferred)}/${formatBytes(progress.total)}`;
+        const percent = progress.transferred / progress.total  * 100;
+        console.log(status_text)
+        console.log(percent)
+        self.gui_model_status.innerHTML = status_text
         if (self.mdlProgressInitDone) {
-            console.log(`Downloading ${self.current_model_name} ${formatBytes(progress.transferred)}/${formatBytes(progress.total)}`)
-            console.log(progress)
-            
-            self.gui_model_status.innerHTML = `Downloading ${self.current_model_name} ${formatBytes(progress.transferred)}/${formatBytes(progress.total)}`
-            self.gui_model_progressbar.MaterialProgress.setProgress(progress.total / progress.transferred * 100)
+            console.log("Update progress bar")
+            self.gui_model_progressbar.MaterialProgress.setProgress(percent)
         }
     }
     downloadModelDone(self,response) {
@@ -79,6 +79,7 @@ class App{
 
     downloadModelError(self, err) {
         const status_text = `Model "${self.current_model_name}" download error`;
+        
         console.log(status_text)
         console.error(err);
         self.gui_model_status.innerHTML = status_text;
