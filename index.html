@@ -59,20 +59,20 @@ limitations under the License.
       <p class='section-head'>Load Model</p>
 
       <div class="create-model">
-        <select>
-          <option>Select model</option>
-          <option>tiny.en</option>
-          <option>tiny</option>
-          <option>base.en</option>
-          <option>base</option>
+        <select id="select-model">
+          <option value="">Select model</option>
+          <option value="tiny.en">tiny.en</option>
+          <option value="tiny" >tiny</option>
+          <option value="base.en">base.en</option>
+          <option value="base">base</option>
         </select>
       </div>
       <p>
-        <div id="model-progressbar">
-          <div id="model-status mdl-button--accent">
+        <div id="model-progressbar-container">
+          <div id="model-status">
             Model not selected
           </div>
-          <div id="p1" class="mdl-progress mdl-js-progress"></div>
+          <div id="model-progressbar" class="mdl-progress mdl-js-progress"></div>
         </div>
       </p>
     </section>
