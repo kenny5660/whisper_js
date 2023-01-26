@@ -6,6 +6,7 @@ class MultiHeadAttention extends tf.layers.Layer {
 		super({});
 		// this.nState = nState;
 		this.nHead = nHead;
+
 		const prefix = Object.keys(weights)[0].split('.')[0]; // {'cross_attn', 'attn'}
 
 		this.query = tf.layers.dense({
@@ -153,12 +154,14 @@ class AudioEncoder extends tf.layers.Layer {
 	constructor(nMels, n_ctx, nState, nHead, n_layer, weights) {
 		super();
 		this.gelu = new GeLU();
+
 		this.conv1 = tf.layers.conv1d({
 			filters: nState,
 			kernelSize: 3,
 			padding: 'same',
 			weights: [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ]
 		});
+
 		this.conv2 = tf.layers.conv1d({
 			filters: nState,
 			kernelSize: 3,
@@ -171,7 +174,7 @@ class AudioEncoder extends tf.layers.Layer {
 		// this.positionalEmbedding = weights['encoder.positional_embedding'];
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights[i], true));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights['encoder.blocks.'][i], true));
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
@@ -212,7 +215,7 @@ class TextDecoder extends tf.layers.Layer {
 		this.positionalEmbedding = weights['decoder.positional_embedding'];
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights[i], true));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights['decoder.blocks.'][i], true));
 		}
 		this.ln = tf.layers.layerNormalization({
 			inputShape: nState,
@@ -261,6 +264,7 @@ class TextDecoder extends tf.layers.Layer {
 
 export class Whisper extends tf.layers.Layer {
 	constructor(dims, model_state_dict) {
+		super();
 		this.dims = dims;
 		this.model_state_dict = model_state_dict;
 
@@ -268,49 +272,49 @@ export class Whisper extends tf.layers.Layer {
 		let decoderWeights = { 'decoder.blocks.': {} };
 
 		function collectBlockWeights(fullName, prefix, weights) {
-			// prefix = 'encoder.blocks.'
-			const num = Number(fullName[prefix.length - 1]);
-			// TODO: only work for numbers < 10
-			const attn_layer_name = fullName.substring((prefix + '*.').length - 1);
+			const num = Number(fullName[prefix.length]);
 
-			if (!weights[prefix][num]) {
+			// TODO: only work for numbers < 10
+			const attn_layer_name = fullName.substring(prefix.length + 1);
+
+			if (typeof weights[prefix][num] === 'undefined') {
 				weights[prefix][num] = {};
 			}
-			weights[prefix][num][attn_layer_name] = model_state_dict[fullName];
+
+			weights[prefix][num][attn_layer_name] = model_state_dict.get(fullName);
 		}
 
-		for (let name in model_state_dict.keys()) {
+		for (let name of model_state_dict.keys()) {
 			if (name.includes('encoder')) {
-				// encoderWeights[name] = model_state_dict[name];
 				if (!name.includes('blocks')) {
-					encoderWeights[name] = model_state_dict[name];
+					encoderWeights[name] = model_state_dict.get(name);
 				} else {
-					// number of cur res attn block
 					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
 				}
 			}
 			if (name.includes('decoder')) {
-				if (!name.includes('decoder')) {
-					decoderWeights[name] = model_state_dict[name];
+				if (!name.includes('blocks')) {
+					decoderWeights[name] = model_state_dict.get(name);
+				} else {
+					collectBlockWeights(name, 'decoder.blocks.', decoderWeights);
 				}
-				collectBlockWeights(name, 'decoder.blocks.', decoderWeights);
 			}
 		}
 
 		this.encoder = new AudioEncoder(
-			this.dims.nMels,
-			this.dims.nAudioCtx,
-			this.dims.nAudioState,
-			this.dims.nAudioHead,
-			this.dims.nAudioLayer,
+			this.dims.n_mels,
+			this.dims.n_audio_ctx,
+			this.dims.n_audio_state,
+			this.dims.n_audio_head,
+			this.dims.n_audio_layer,
 			encoderWeights
 		);
 		this.decoder = new TextDecoder(
-			this.dims.nVocab,
-			this.dims.nTextCtx,
-			this.dims.nTextState,
-			this.dims.nTextHead,
-			this.dims.nTextLayer,
+			this.dims.n_vocab,
+			this.dims.n_text_ctx,
+			this.dims.n_text_state,
+			this.dims.n_text_head,
+			this.dims.n_text_layer,
 			decoderWeights
 		);
 	}
