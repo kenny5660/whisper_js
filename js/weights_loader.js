@@ -1,10 +1,10 @@
 import h5wasm from "h5wasm";
 import * as tf from '@tensorflow/tfjs';
 
-class Weights {
+export class Weights {
 
     static _MODELS = {
-        "tiny.en": "https://raw.githubusercontent.com/kenny5660/whisper_js/weights/tiny.en.h5",
+        "tiny.en": "",
         "tiny": "",
         "base.en": "",
         "base": "",
@@ -16,13 +16,13 @@ class Weights {
     }
     
     constructor(model_name) {
-        this.init_(model_name);
+        this.model_name = model_name;
     }
 
-    async init_(model_name) {
+    async init_weights() {
         const { FS } = await h5wasm.ready;
-
-        let model_url = this._MODELS[model_name];
+        
+        let model_url = Weights._MODELS[this.model_name];
 
         let response = await fetch(model_url);
         let ab = await response.arrayBuffer();

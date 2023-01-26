@@ -19,35 +19,42 @@ _MODELS = {
     "large": "https://openaipublic.azureedge.net/main/whisper/models/e4b87e7e0bf463eb8e6956e646f1e277e901512310def2c24bf0e11bd3c28e9a/large.pt",
 }
 
+_COMPRESSIONS = ["lzf", "gzip", "None"]
+
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description='')
-parser.add_argument("--model", default="tiny", choices=_MODELS, help="name of the Whisper model to convert")
+
+parser.add_argument("--model", default="tiny", choices=_MODELS, help="the name of the scale sizse for the Whisper model to convert")
+parser.add_argument("--compression", "-c", choices=_COMPRESSIONS, default="lzf", help="compression filters or None")
 parser.add_argument("--local_path", "-l", help="get weights from local directory")
-parser.add_argument("--compression", "-c", default="lzf", help="")
 parser.add_argument("--output_dir", help="directory to save the converted weights")
 
+
 args = parser.parse_args().__dict__
-model_name = args.pop("model")
-local_path = args.pop("local_path")
+model_name  = args.pop("model")
+local_path  = args.pop("local_path")
 compression = args.pop("compression")
-output_dir = args["output_dir"]
-
-converted_output_dir = args["output_dir"]
-
-if output_dir:
-    output_dir = os.path.join(output_dir, f"./{model_name}.pt")
-    converted_output_dir = os.path.join(converted_output_dir, f"./{model_name}.h5")
-else:
-    output_dir = f"./{model_name}.pt"
-    converted_output_dir = f"./{model_name}.h5"
-
-if os.path.exists(output_dir):
-    warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
+output_dir  = args["output_dir"]
 
 if local_path:
     weights = torch.load(local_path)
-    converted_output_dir = f"./{os.path.split(local_path)[1][:-3]}.h5"
+
+    if output_dir: 
+        output_dir = os.path.join(output_dir, f"{os.path.split(local_path)[1][:-3]}.h5")
+    else:
+        output_dir = f".\{os.path.split(local_path)[1][:-3]}.h5"
+
+    if os.path.exists(output_dir):
+        warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
 else:
-    with urllib.request.urlopen(_MODELS[model_name]) as source, open(output_dir, "wb") as output:
+    if output_dir:
+        output_dir_pt = os.path.join(output_dir, f"{model_name}.pt")
+    else:
+        output_dir_pt = f".\{model_name}.pt"
+
+    if os.path.exists(output_dir_pt):
+        warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
+
+    with urllib.request.urlopen(_MODELS[model_name]) as source, open(output_dir_pt, "wb") as output:
         with tqdm(total=int(source.info().get("Content-Length")), ncols=80, unit='iB', unit_scale=True, unit_divisor=1024) as loop:
             while True:
                 buffer = source.read(8192)
@@ -56,8 +63,13 @@ else:
 
                 output.write(buffer)
                 loop.update(len(buffer))
+
+    if output_dir:
+        output_dir = os.path.join(output_dir, f"{model_name}.h5")
+    else:
+        output_dir = f".\{model_name}.h5"
     
-    weights = torch.load(f"./{model_name}.pt")
+    weights = torch.load(output_dir_pt)
 
 
 for key in weights['model_state_dict'].keys():
@@ -73,7 +85,7 @@ for key in weights['model_state_dict'].keys():
 
         weights['model_state_dict'][key] = torch.transpose(weights['model_state_dict'][key], 1, 0)
 
-with h5py.File(converted_output_dir, 'w') as f:
+with h5py.File(output_dir, 'w') as f:
 
     group_1 = f.create_group('dims')
     group_2 = f.create_group('model_state_dict')
@@ -81,5 +93,9 @@ with h5py.File(converted_output_dir, 'w') as f:
     for key in weights['dims'].keys():
         group_1.create_dataset(f'{key}', data=weights['dims'][key])
     
-    for key in weights['model_state_dict'].keys():
-        group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32), compression=compression)
+    if compression != "None":
+        for key in weights['model_state_dict'].keys():
+            group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32), compression=compression)
+    else:
+        for key in weights['model_state_dict'].keys():
+            group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32))
