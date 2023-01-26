@@ -1,14 +1,34 @@
+// const tf = require('@tensorflow/tfjs');
 import * as tf from '@tensorflow/tfjs';
 
 class MultiHeadAttention extends tf.layers.Layer {
-	constructor(nState, nHead) {
+	constructor(nState, nHead, weights) {
 		super({});
 		// this.nState = nState;
 		this.nHead = nHead;
-		this.query = tf.layers.dense({ inputShape: nState, units: nState });
-		this.key = tf.layers.dense({ inputShape: nState, units: nState, useBias: false });
-		this.value = tf.layers.dense({ inputShape: nState, units: nState });
-		this.out = tf.layers.dense({ inputShape: nState, units: nState });
+		const prefix = Object.keys(weights)[0].split('.')[0]; // {'cross_attn', 'attn'}
+
+		this.query = tf.layers.dense({
+			inputShape: nState,
+			units: nState,
+			weights: [ weights[prefix + '.query.weight'], weights[prefix + '.query.bias'] ]
+		});
+		this.key = tf.layers.dense({
+			inputShape: nState,
+			units: nState,
+			useBias: false,
+			weights: [ weights[prefix + '.key.weight'], weights[prefix + '.key.bias'] ]
+		});
+		this.value = tf.layers.dense({
+			inputShape: nState,
+			units: nState,
+			weights: [ weights[prefix + '.value.weight'], weights[prefix + '.value.bias'] ]
+		});
+		this.out = tf.layers.dense({
+			inputShape: nState,
+			units: nState,
+			weights: [ weights[prefix + '.out.weight'], weights[prefix + '.out.bias'] ]
+		});
 	}
 
 	static get className() {
@@ -67,19 +87,38 @@ class GeLU extends tf.layers.Layer {
 }
 
 class ResidualAttentionBlock extends tf.layers.Layer {
-	constructor(nState, nHead, crossAttention = false) {
+	constructor(nState, nHead, weights, crossAttention = false) {
 		super();
-		this.attn = new MultiHeadAttention(nState, nHead);
-		this.attn_ln = tf.layers.layerNormalization({ inputShape: nState });
+		this.attn = new MultiHeadAttention(nState, nHead, weights);
+		this.attn_ln = tf.layers.layerNormalization({
+			inputShape: nState,
+			weights: [ weights['attn_ln.weight'], weights['attn_ln.bias'] ]
+		});
 
-		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead) : null;
-		this.cross_attn_ln = crossAttention ? tf.layers.layerNormalization({ inputShape: nState }) : null;
+		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead, weights) : null;
+		this.cross_attn_ln = crossAttention
+			? tf.layers.layerNormalization({
+					inputShape: nState,
+					weights: [ weights['cross_attn_ln.weight'], weights['cross_attn_ln.bias'] ]
+				})
+			: null;
 
 		const nMlp = nState * 4;
-		this.mlp1 = tf.layers.dense({ inputShape: nState, units: nMlp });
+		this.mlp1 = tf.layers.dense({
+			inputShape: nState,
+			units: nMlp,
+			weights: [ weights['mlp.0.weight'], weights['mlp.0.bias'] ]
+		});
 		this.mlp2 = new GeLU();
-		this.mlp3 = tf.layers.dense({ inputShape: nMlp, units: nState });
-		this.mlpLn = tf.layers.layerNormalization({ inputShape: nState });
+		this.mlp3 = tf.layers.dense({
+			inputShape: nMlp,
+			units: nState,
+			weights: [ weights['mlp.2.weight'], weights['mlp.2.bias'] ]
+		});
+		this.mlpLn = tf.layers.layerNormalization({
+			inputShape: nState,
+			weights: [ weights['mlp_ln.weight'], weights['mlp_ln.bias'] ]
+		});
 	}
 
 	call({ x, xa, mask, kvCache }) {
@@ -111,18 +150,33 @@ function sinusoids(length, channels, max_timescale = 10000) {
 }
 
 class AudioEncoder extends tf.layers.Layer {
-	constructor(nMels, n_ctx, nState, nHead, n_layer) {
+	constructor(nMels, n_ctx, nState, nHead, n_layer, weights) {
 		super();
 		this.gelu = new GeLU();
-		this.conv1 = tf.layers.conv1d({ filters: nState, kernelSize: 3, padding: 'same' });
-		this.conv2 = tf.layers.conv1d({ filters: nState, kernelSize: 3, strides: 2, padding: 'same' });
+		this.conv1 = tf.layers.conv1d({
+			filters: nState,
+			kernelSize: 3,
+			padding: 'same',
+			weights: [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ]
+		});
+		this.conv2 = tf.layers.conv1d({
+			filters: nState,
+			kernelSize: 3,
+			strides: 2,
+			padding: 'same',
+			weights: [ weights['encoder.conv2.weight'], weights['encoder.conv2.bias'] ]
+		});
 
 		this.positionalEmbedding = sinusoids(n_ctx, nState);
+		// this.positionalEmbedding = weights['encoder.positional_embedding'];
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, true));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights[i], true));
 		}
-		this.ln_post = tf.layers.layerNormalization({ inputShape: nState });
+		this.ln_post = tf.layers.layerNormalization({
+			inputShape: nState,
+			weights: [ weights['encoder.ln_post.weights'], weights['encoder.ln_post.bias'] ]
+		});
 	}
 
 	call(x) {
@@ -146,19 +200,24 @@ class AudioEncoder extends tf.layers.Layer {
 }
 
 class TextDecoder extends tf.layers.Layer {
-	constructor(nVocab, n_ctx, nState, nHead, n_layer) {
+	constructor(nVocab, n_ctx, nState, nHead, n_layer, weights) {
 		super();
 		this.tokenEmbedding = tf.layers.embedding({
 			inputDim: nVocab,
 			outputDim: nState,
-			trainable: false
+			trainable: false,
+			weights: weights['decoder.token_embedding.weight']
 		});
-		this.positionalEmbedding = tf.zeros([ n_ctx, nState ]);
+		// this.positionalEmbedding = tf.zeros([ n_ctx, nState ]);
+		this.positionalEmbedding = weights['decoder.positional_embedding'];
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, true));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights[i], true));
 		}
-		this.ln = tf.layers.layerNormalization({ inputShape: nState });
+		this.ln = tf.layers.layerNormalization({
+			inputShape: nState,
+			weights: [ weights['decoder.ln.weight'], weights['decoder.ln.bias'] ]
+		});
 
 		const triuMask = tf.fill([ n_ctx, n_ctx ], -Infinity).arraySync().map((array, i) => {
 			return array.map((num, j) => {
@@ -166,7 +225,6 @@ class TextDecoder extends tf.layers.Layer {
 				return num;
 			});
 		});
-		// TODO: disable gradients for mask and somehow add to "state dict"
 		this.mask = tf.tensor(triuMask);
 	}
 
@@ -191,7 +249,7 @@ class TextDecoder extends tf.layers.Layer {
 		x = this.ln.apply(x);
 
 		let weights = this.tokenEmbedding.getWeights()[0];
-		weights = tf.transpose(this.tokenEmbedding.getWeights()[0], [ 1, 0 ]);
+		weights = tf.transpose(weights, [ 1, 0 ]);
 		x = x.matMul(weights);
 		return x;
 	}
@@ -202,24 +260,58 @@ class TextDecoder extends tf.layers.Layer {
 }
 
 export class Whisper extends tf.layers.Layer {
-	constructor(dims) {
-		super();
+	constructor(dims, model_state_dict) {
 		this.dims = dims;
-		// assume dims is dict-like object
-		// can we access with '.' ?
+		this.model_state_dict = model_state_dict;
+
+		let encoderWeights = { 'encoder.blocks.': {} };
+		let decoderWeights = { 'decoder.blocks.': {} };
+
+		function collectBlockWeights(fullName, prefix, weights) {
+			// prefix = 'encoder.blocks.'
+			const num = Number(fullName[prefix.length - 1]);
+			// TODO: only work for numbers < 10
+			const attn_layer_name = fullName.substring((prefix + '*.').length - 1);
+
+			if (!weights[prefix][num]) {
+				weights[prefix][num] = {};
+			}
+			weights[prefix][num][attn_layer_name] = model_state_dict[fullName];
+		}
+
+		for (let name in model_state_dict.keys()) {
+			if (name.includes('encoder')) {
+				// encoderWeights[name] = model_state_dict[name];
+				if (!name.includes('blocks')) {
+					encoderWeights[name] = model_state_dict[name];
+				} else {
+					// number of cur res attn block
+					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
+				}
+			}
+			if (name.includes('decoder')) {
+				if (!name.includes('decoder')) {
+					decoderWeights[name] = model_state_dict[name];
+				}
+				collectBlockWeights(name, 'decoder.blocks.', decoderWeights);
+			}
+		}
+
 		this.encoder = new AudioEncoder(
 			this.dims.nMels,
 			this.dims.nAudioCtx,
 			this.dims.nAudioState,
 			this.dims.nAudioHead,
-			this.dims.nAudioLayer
+			this.dims.nAudioLayer,
+			encoderWeights
 		);
 		this.decoder = new TextDecoder(
 			this.dims.nVocab,
 			this.dims.nTextCtx,
 			this.dims.nTextState,
 			this.dims.nTextHead,
-			this.dims.nTextLayer
+			this.dims.nTextLayer,
+			decoderWeights
 		);
 	}
 
