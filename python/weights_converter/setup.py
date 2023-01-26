@@ -1,8 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 import weights_converter
 setup(
-    name='convert_weights',
-    version='1.0.0',
+    name='weights_converter',
+    version=weights_converter.__version__,
+    packages=find_packages(),
     install_requires=[
             'tqdm==4.64.1',
             'urllib3==1.26.13',
@@ -12,6 +13,6 @@ setup(
         ],
         entry_points={
     'console_scripts':
-        ['convert_weights = weights_converter.convert_weights']
+        ['weights_converter = weights_converter.__main__:main']
     }
 )
