@@ -46,6 +46,7 @@ jobs:
         with:
           ref: weights
           lfs: true
+          clean: false
       
       - name: Copy weights
         run: cp ./*.h5 ./dist/
