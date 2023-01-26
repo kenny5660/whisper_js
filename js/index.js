@@ -43,13 +43,21 @@ class App{
         this.current_model_name = ""
         this.gui_select_model = document.getElementById("select-model");
         this.gui_model_progressbar = document.getElementById("model-progressbar");
+
         this.gui_model_status = document.getElementById("model-status");
         this.gui_select_model.onchange = () => this.onchangeSelectModel(this.gui_select_model)
+
+        this.input_audiofile = document.getElementById("input_audiofile");
+
+        this.input_audiofile.onchange = (event) => this.onchangeInputAudioFile(event)
         this.mdlProgressInitDone = false;
         let self = this;
         this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar,this.gui_model_status);
     }
-    
+    onchangeInputAudioFile(event) {
+        console.log(this.input_audiofile.files[0]);
+
+    }
     onchangeSelectModel(obj) {
         console.log("Select model :", obj.value);
         this.current_model_name = obj.value;
