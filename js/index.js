@@ -19,6 +19,7 @@ import * as tf from '@tensorflow/tfjs';
 import fetchProgress from "fetch-progress"
 import formatBytes from "format-bytes"
 import { Weights } from './Weights';
+import { WeightsDownloader } from './WeightsDownloader';
 import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
 
@@ -37,6 +38,7 @@ class App{
 
     constructor() {
         this.weights = null;
+        
         this.modelReady = false;
         this.current_model_name = ""
         this.gui_select_model = document.getElementById("select-model");
@@ -45,73 +47,24 @@ class App{
         this.gui_select_model.onchange = () => this.onchangeSelectModel(this.gui_select_model)
         this.mdlProgressInitDone = false;
         let self = this;
-        this.gui_model_progressbar.addEventListener('mdl-componentupgraded', function () {
-            console.log("componentupgraded");
-            this.MaterialProgress.setProgress(0);
-            self.mdlProgressInitDone = true;
-          });
+        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar,this.gui_model_status);
     }
     
     onchangeSelectModel(obj) {
         console.log("Select model :", obj.value);
         this.current_model_name = obj.value;
-        this.downloadModel();
-    }
-    updateProgressBar(self, progress) {
-        const status_text = `Downloading ${self.current_model_name} ${formatBytes(progress.transferred)}/${formatBytes(progress.total)}`;
-        const percent = progress.transferred / progress.total  * 100;
-        console.log(status_text)
-        console.log(percent)
-        self.gui_model_status.innerHTML = status_text
-        if (self.mdlProgressInitDone) {
-            console.log("Update progress bar")
-            self.gui_model_progressbar.MaterialProgress.setProgress(percent)
-        }
-    }
-    downloadModelDone(self,response) {
-        console.log("Download done")
-        console.log(response)
-        console.log(self)
-        self.weights = new Weights(self.current_model_name)
-        response.arrayBuffer().then((buffer) => self.weights.init_weights(new Uint8Array(buffer)).
-            then(() => this.weightsDone(self),() => this.weightsError(self)))
-    }
-
-    downloadModelError(self, err) {
-        const status_text = `Model "${self.current_model_name}" download error`;
-        
-        console.log(status_text)
-        console.error(err);
-        self.gui_model_status.innerHTML = status_text;
-        throw err;
-    }
-    downloadModel() {
-        const self = this;
         this.modelReady = false;
-        const status_text = `Try fetch model: "${self.current_model_name}" `;
-        console.log(status_text);
-        self.gui_model_status.innerHTML = status_text;
-        fetch(MODELS_URL[this.current_model_name]).then(
-            fetchProgress({
-                onProgress: (p)=>this.updateProgressBar(self,p),
-                onError: (err) => this.downloadModelError(self,err)
-            })
-            ,
-            (err) => this.downloadModelError(self,err)
-        ).then((resp)=>this.downloadModelDone(self,resp))
+        this.weightsDownloader.abort();
+        let self = this;
+        this.weightsDownloader.downloadModel(this.current_model_name).then((weights) => this.weightsReady(self,weights));
     }
-    weightsDone(self) {
-        const status_text = `Model "${self.current_model_name}" ready!`;
-        console.log(status_text);
-        self.gui_model_status.innerHTML = status_text;
+    weightsReady(self,weights) {
+        self.weights = weights
         self.modelReady = true;
+        console.log("weightsReady ", this.current_model_name);
+        console.log(self.weights)
     }
-    weightsError(self) {
-        const status_text = `Model "${self.current_model_name}" parse error!`;
-        console.log(status_text);
-        self.gui_model_status.innerHTML = status_text;
-        self.modelReady = false;
-    }
+   
 }
 
 var app = new App()
