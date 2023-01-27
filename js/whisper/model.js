@@ -174,7 +174,7 @@ class AudioEncoder extends tf.layers.Layer {
 		// this.positionalEmbedding = weights['encoder.positional_embedding'];
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights['encoder.blocks.'][i], true));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights['encoder.blocks.'][i]));
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
