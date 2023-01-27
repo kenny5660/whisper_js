@@ -18,7 +18,7 @@ class MultiHeadAttention extends tf.layers.Layer {
 			inputShape: nState,
 			units: nState,
 			useBias: false,
-			weights: [ weights[prefix + '.key.weight'], weights[prefix + '.key.bias'] ]
+			weights: [ weights[prefix + '.key.weight'] ]
 		});
 		this.value = tf.layers.dense({
 			inputShape: nState,
@@ -184,7 +184,8 @@ class AudioEncoder extends tf.layers.Layer {
 
 	call(x) {
 		let xTransposed = x.transpose([ 0, 2, 1 ]);
-		x = this.gelu.apply(this.conv1.apply(xTransposed));
+		x = this.conv1.apply(xTransposed);
+		x = this.gelu.apply(x);
 		x = this.gelu.apply(this.conv2.apply(x));
 		tf.util.assert(
 			tf.equal(tf.tensor(x.shape.slice(1)), tf.tensor(this.positionalEmbedding.shape)),
@@ -275,26 +276,29 @@ export class Whisper extends tf.layers.Layer {
 			const num = Number(fullName[prefix.length]);
 
 			// TODO: only work for numbers < 10
-			const attn_layer_name = fullName.substring(prefix.length + 1);
+			const attn_layer_name = fullName.substring(prefix.length + 2);
 
 			if (typeof weights[prefix][num] === 'undefined') {
 				weights[prefix][num] = {};
 			}
-
-			weights[prefix][num][attn_layer_name] = model_state_dict.get(fullName);
+			let dataset = model_state_dict.get(fullName);
+			weights[prefix][num][attn_layer_name] = tf.tensor(dataset.value, dataset.shape);
 		}
 
 		for (let name of model_state_dict.keys()) {
 			if (name.includes('encoder')) {
 				if (!name.includes('blocks')) {
-					encoderWeights[name] = model_state_dict.get(name);
+					let dataset = model_state_dict.get(name);
+					encoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
 				} else {
 					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
 				}
 			}
 			if (name.includes('decoder')) {
 				if (!name.includes('blocks')) {
-					decoderWeights[name] = model_state_dict.get(name);
+					// decoderWeights[name] = model_state_dict.get(name);
+					let dataset = model_state_dict.get(name);
+					decoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
 				} else {
 					collectBlockWeights(name, 'decoder.blocks.', decoderWeights);
 				}
