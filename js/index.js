@@ -15,14 +15,11 @@
  * =============================================================================
  */
 
-import * as tf from '@tensorflow/tfjs';
-import fetchProgress from "fetch-progress"
-import formatBytes from "format-bytes"
-import { Weights } from './Weights';
+
 import { WeightsDownloader } from './WeightsDownloader';
 import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
-
+import { Whisper } from './whisper/model.js';
 const MODELS_URL = {
     "tiny.en": "tiny.en.h5",
     "tiny": "tiny.h5",
@@ -47,7 +44,8 @@ class App{
         this.gui_select_model.onchange = () => this.onchangeSelectModel(this.gui_select_model)
         this.mdlProgressInitDone = false;
         let self = this;
-        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar,this.gui_model_status);
+        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar, this.gui_model_status);
+        this.whisper = null
     }
     
     onchangeSelectModel(obj) {
@@ -60,9 +58,10 @@ class App{
     }
     weightsReady(self,weights) {
         self.weights = weights
-        self.modelReady = true;
+        self.whisper = new Whisper(self.weights.weights.get('dims'), self.weights.weights.get('model_state_dict'));
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
+        self.modelReady = true;
     }
    
 }
