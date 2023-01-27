@@ -20,6 +20,7 @@ import { WeightsDownloader } from './WeightsDownloader';
 import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
 import { Whisper } from './whisper/model.js';
+import * as tf from '@tensorflow/tfjs';
 const MODELS_URL = {
     "tiny.en": "tiny.en.h5",
     "tiny": "tiny.h5",
@@ -54,6 +55,14 @@ class App{
     }
     onchangeInputAudioFile(event) {
         console.log(this.input_audiofile.files[0]);
+        var fileread = new FileReader();
+        let self = this;
+        fileread.onload = function() {
+            let json = JSON.parse(fileread.result);
+            self.run_model(json.mel).then(res => console.log(res))
+          };
+          fileread.readAsText(this.input_audiofile.files[0]);
+        
 
     }
     onchangeSelectModel(obj) {
@@ -70,6 +79,11 @@ class App{
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
         self.modelReady = true;
+    }
+    async run_model(mel) {
+        mel = tf.tensor(mel)
+        console.log(mel)
+        return this.whisper.embed_audio(mel);
     }
    
 }
