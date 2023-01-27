@@ -298,19 +298,19 @@ export class Whisper extends tf.layers.Layer {
 		}
 
 		this.encoder = new AudioEncoder(
-			this.dims.nMels,
-			this.dims.nAudioCtx,
-			this.dims.nAudioState,
-			this.dims.nAudioHead,
-			this.dims.nAudioLayer,
+			this.dims.get('n_mels').value,
+			this.dims.get('n_audio_ctx').value,
+			this.dims.get('n_audio_state').value,
+			this.dims.get('n_audio_head').value,
+			this.dims.get('n_audio_layer').value,
 			encoderWeights
 		);
 		this.decoder = new TextDecoder(
-			this.dims.nVocab,
-			this.dims.nTextCtx,
-			this.dims.nTextState,
-			this.dims.nTextHead,
-			this.dims.nTextLayer,
+			this.dims.get('n_vocab').value,
+			this.dims.get('n_text_ctx').value,
+			this.dims.get('n_text_state').value,
+			this.dims.get('n_text_head').value,
+			this.dims.get('n_text_layer').value,
 			decoderWeights
 		);
 	}
