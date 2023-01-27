@@ -178,7 +178,7 @@ class AudioEncoder extends tf.layers.Layer {
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
-			weights: [ weights['encoder.ln_post.weights'], weights['encoder.ln_post.bias'] ]
+			weights: [ weights['encoder.ln_post.weight'], weights['encoder.ln_post.bias'] ]
 		});
 	}
 
@@ -296,7 +296,6 @@ export class Whisper extends tf.layers.Layer {
 			}
 			if (name.includes('decoder')) {
 				if (!name.includes('blocks')) {
-					// decoderWeights[name] = model_state_dict.get(name);
 					let dataset = this.model_state_dict.get(name);
 					decoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
 				} else {
