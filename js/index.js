@@ -75,7 +75,7 @@ class App{
     }
     weightsReady(self,weights) {
         self.weights = weights
-        self.whisper = new Whisper(self.weights.weights.get('dims'), self.weights.weights.get('model_state_dict'));
+        self.whisper = new Whisper(self.weights.weights);
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
         self.modelReady = true;
