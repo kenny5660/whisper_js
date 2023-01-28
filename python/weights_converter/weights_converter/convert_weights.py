@@ -21,11 +21,11 @@ def main():
         "large": "https://openaipublic.azureedge.net/main/whisper/models/e4b87e7e0bf463eb8e6956e646f1e277e901512310def2c24bf0e11bd3c28e9a/large.pt",
     }
 
-    _COMPRESSIONS = ["lzf", "gzip", "None"]
+    _COMPRESSIONS = ["gzip", "None"]
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description='')
 
     parser.add_argument("--model", default="tiny", choices=_MODELS, help="the name of the scale sizse for the Whisper model to convert")
-    parser.add_argument("--compression", "-c", choices=_COMPRESSIONS, default="lzf", help="compression filters or None")
+    parser.add_argument("--compression", "-c", choices=_COMPRESSIONS, default="gzip", help="use compression filter or not")
     parser.add_argument("--local_path", "-l", help="get weights from local directory")
     parser.add_argument("--output_dir", help="directory to save the converted weights")
 
