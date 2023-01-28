@@ -18,7 +18,7 @@ class BeamSearchDecoder {
         this.finishedSequences = null;
     }
 
-    async update(tokens, logits) {
+    update(tokens, logits) {
         if (tokens.shape[0] % this.beamSize !== 0) {
             throw new Error(`${tokens.shape[0]} % ${this.beamSize} !== 0`);
         }
