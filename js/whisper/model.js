@@ -178,7 +178,7 @@ class AudioEncoder extends tf.layers.Layer {
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
-			weights: [ weights['encoder.ln_post.weights'], weights['encoder.ln_post.bias'] ]
+			weights: [ weights['encoder.ln_post.weight'], weights['encoder.ln_post.bias'] ]
 		});
 	}
 
@@ -328,7 +328,9 @@ export class Whisper extends tf.layers.Layer {
 	}
 
 	embed_audio(mel) {
-		return this.encoder.apply(mel);
+		const audioFeatures = this.encoder.apply(mel);
+		console.log(audioFeatures.dataSync());
+		return audioFeatures;
 	}
 
 	logits(tokens, audio_features) {
