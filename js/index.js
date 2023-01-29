@@ -33,7 +33,7 @@ const MODELS_URL = {
     "large": "large.h5"
 }
 class App{
-
+ 
     constructor() {
         this.weights = null;
         
@@ -75,7 +75,7 @@ class App{
     }
     weightsReady(self,weights) {
         self.weights = weights
-        self.whisper = new Whisper(self.weights.weights.get('dims'), self.weights.weights.get('model_state_dict'));
+        self.whisper = new Whisper(self.weights.weights);
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
         self.modelReady = true;
@@ -83,7 +83,12 @@ class App{
     async run_model(mel) {
         mel = tf.tensor(mel)
         console.log(mel)
-        return this.whisper.embed_audio(mel);
+        console.log("Run whisper")
+        let audio_features = this.whisper.embed_audio(mel);
+        let tokens = this.weights.get("decoder.token_embedding.weight");
+        console.log("tokens ")
+        console.log(tokens)
+        return this.whisper.logits(tokens, audio_features);
     }
    
 }

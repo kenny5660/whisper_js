@@ -264,14 +264,14 @@ class TextDecoder extends tf.layers.Layer {
 }
 
 export class Whisper extends tf.layers.Layer {
-	constructor(dims, model_state_dict) {
+	constructor(weights) {
 		super();
-		this.dims = dims;
-		this.model_state_dict = model_state_dict;
+		this.dims = weights.get('dims');
+		this.model_state_dict = weights.get('model_state_dict');
 
 		let encoderWeights = { 'encoder.blocks.': {} };
 		let decoderWeights = { 'decoder.blocks.': {} };
-
+		let self = this;
 		function collectBlockWeights(fullName, prefix, weights) {
 			const num = Number(fullName[prefix.length]);
 
@@ -281,14 +281,14 @@ export class Whisper extends tf.layers.Layer {
 			if (typeof weights[prefix][num] === 'undefined') {
 				weights[prefix][num] = {};
 			}
-			let dataset = model_state_dict.get(fullName);
+			let dataset = self.model_state_dict.get(fullName);
 			weights[prefix][num][attn_layer_name] = tf.tensor(dataset.value, dataset.shape);
 		}
 
-		for (let name of model_state_dict.keys()) {
+		for (let name of this.model_state_dict.keys()) {
 			if (name.includes('encoder')) {
 				if (!name.includes('blocks')) {
-					let dataset = model_state_dict.get(name);
+					let dataset = this.model_state_dict.get(name);
 					encoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
 				} else {
 					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
@@ -296,8 +296,7 @@ export class Whisper extends tf.layers.Layer {
 			}
 			if (name.includes('decoder')) {
 				if (!name.includes('blocks')) {
-					// decoderWeights[name] = model_state_dict.get(name);
-					let dataset = model_state_dict.get(name);
+					let dataset = this.model_state_dict.get(name);
 					decoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
 				} else {
 					collectBlockWeights(name, 'decoder.blocks.', decoderWeights);

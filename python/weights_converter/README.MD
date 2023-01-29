@@ -8,11 +8,11 @@ Python script for converting Whisper model weights from Torch format (.pt) to Te
 
 **--model**           - название весов для скачивания, затем конвертации (по умолчанию tiny) (если указан --local_path данный аргумент игнорируется).  
 **--local_path, -l**  - если веса расположены локально, указываем путь до них. Иначе скачиваем.  
-**--compression, -c** - способ сжатия весов (по умолчанию "lzf").  
+**--compression, -c** - сжатие весов (по умолчанию используется "gzip").  
 **--output_dir**      - путь куда сложить конвертированные веса. Если не указан, веса складываются в локальную директорию.  
 
 ```
-usage: convert_weights.py [-h] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large}] [--compression {lzf,gzip,None}] [--local_path LOCAL_PATH] [--output_dir OUTPUT_DIR]
+usage: convert_weights.py [-h] [--model {tiny.en,tiny,base.en,base,small.en,small,medium.en,medium,large}] [--compression {gzip,None}] [--local_path LOCAL_PATH] [--output_dir OUTPUT_DIR]
 ```
 
 ## Example
