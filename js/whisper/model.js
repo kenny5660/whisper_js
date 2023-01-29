@@ -1,4 +1,3 @@
-// const tf = require('@tensorflow/tfjs');
 import * as tf from '@tensorflow/tfjs';
 
 class MultiHeadAttention extends tf.layers.Layer {
@@ -126,12 +125,14 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		let xLayerNormed = this.attn_ln.apply(x);
 		x = x.add(this.attn.apply({ x: xLayerNormed, mask: mask, kvCache: kvCache }));
 		if (this.cross_attn) {
-			x = x.add(this.cross_attn.apply({ x: this.cross_attn_ln.apply(x), xa: xa, kvCache: kvCache }));
+			let arg = this.cross_attn.apply({ x: this.cross_attn_ln.apply(x), xa: xa, kvCache: kvCache });
+			x = x.add(arg);
 		}
-		x = this.mlpLn.apply(x);
-		x = this.mlp1.apply(x);
-		x = this.mlp2.apply(x);
-		x = this.mlp3.apply(x);
+		let xToAdd = this.mlpLn.apply(x);
+		xToAdd = this.mlp1.apply(xToAdd);
+		xToAdd = this.mlp2.apply(xToAdd);
+		xToAdd = this.mlp3.apply(xToAdd);
+		x = x.add(xToAdd);
 		return x;
 	}
 
@@ -158,18 +159,22 @@ class AudioEncoder extends tf.layers.Layer {
 		this.conv1 = tf.layers.conv1d({
 			filters: nState,
 			kernelSize: 3,
-			padding: 'same',
-			weights: [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ]
+			// padding: 'same',
+			padding: 'valid',
+			weights: [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ],
+			dataFormat: 'channelsFirst'
 		});
 
 		this.conv2 = tf.layers.conv1d({
 			filters: nState,
 			kernelSize: 3,
 			strides: 2,
-			padding: 'same',
-			weights: [ weights['encoder.conv2.weight'], weights['encoder.conv2.bias'] ]
+			padding: 'valid',
+			weights: [ weights['encoder.conv2.weight'], weights['encoder.conv2.bias'] ],
+			dataFormat: 'channelsFirst'
 		});
-
+		this.conv1_weights = [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ];
+		this.conv2_weights = [ weights['encoder.conv2.weight'], weights['encoder.conv2.bias'] ];
 		this.positionalEmbedding = sinusoids(n_ctx, nState);
 		// this.positionalEmbedding = weights['encoder.positional_embedding'];
 		this.blocks = [];
@@ -183,10 +188,36 @@ class AudioEncoder extends tf.layers.Layer {
 	}
 
 	call(x) {
-		let xTransposed = x.transpose([ 0, 2, 1 ]);
-		x = this.conv1.apply(xTransposed);
+		// x = this.conv1.apply(x);
+		// x = this.gelu.apply(x);
+		// x = x.transpose([ 0, 2, 1 ]);
+		// x = this.conv2.apply(x);
+		// x = this.gelu.apply(x);
+
+		// ugly pad
+		// x.shape == [1, 80, 3000]
+		function pad(x) {
+			let padding = tf.zeros([ 1, x.shape[1], 1 ]);
+			return padding.concat(x.concat(padding, 2), 2);
+		}
+		// x = pad(x).transpose([ 0, 2, 1 ]);
+		// x = tf.conv1d(x, this.conv1_weights[0], 1, 0);
+		// x = x.add(this.conv1_weights[1].reshape([ 1, 1, -1 ]));
+		// x = this.gelu.apply(x);
+
+		// x = pad(x.transpose([ 0, 2, 1 ])).transpose([ 0, 2, 1 ]);
+		// x = tf.conv1d(x, this.conv2_weights[0], 2, 0);
+		// x = x.add(this.conv2_weights[1].reshape([ 1, 1, -1 ]));
+		// x = this.gelu.apply(x);
+
+		x = pad(x);
+		x = this.conv1.apply(x);
 		x = this.gelu.apply(x);
-		x = this.gelu.apply(this.conv2.apply(x));
+		x = x.transpose([ 0, 2, 1 ]);
+		x = pad(x);
+		x = this.conv2.apply(x);
+		x = this.gelu.apply(x);
+
 		tf.util.assert(
 			tf.equal(tf.tensor(x.shape.slice(1)), tf.tensor(this.positionalEmbedding.shape)),
 			'incorrect audio shape'
