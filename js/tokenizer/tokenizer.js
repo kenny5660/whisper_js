@@ -121,7 +121,7 @@ const TO_LANGUAGE_CODE = {
 class Tokenizer {
 	constructor(name) {
 		// this.path = '../whisper_project/whisper/assets/' + name;
-		this.path = 'C:\\Users\\Anastasia\\unik\\whisper_project\\whisper\\whisper\\assets\\' + name;
+		this.path = name;
 		this.vocab = require(this.path + '\\vocab.json');
 		this.nonSpeechTokens = require(this.path + '\\non_speech_tokens.json')['non_speech_tokens'];
 		this.specialTokensMap = require(this.path + '\\special_tokens_map.json');
