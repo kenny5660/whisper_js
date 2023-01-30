@@ -266,21 +266,28 @@ class TextDecoder extends tf.layers.Layer {
 export class Whisper extends tf.layers.Layer {
 	constructor(weights) {
 		super();
+
 		this.dims = weights.get('dims');
 		this.model_state_dict = weights.get('model_state_dict');
 
 		let encoderWeights = { 'encoder.blocks.': {} };
 		let decoderWeights = { 'decoder.blocks.': {} };
+
 		let self = this;
+
 		function collectBlockWeights(fullName, prefix, weights) {
 			const num = Number(fullName[prefix.length]);
-
-			// TODO: only work for numbers < 10
 			const attn_layer_name = fullName.substring(prefix.length + 2);
+
+			if (!isNaN(Number(fullName[prefix.length + 1]))) {
+				num = Number(fullName[prefix.length] + fullName[prefix.length + 1]);
+				attn_layer_name = fullName.substring(prefix.length + 3);
+			}
 
 			if (typeof weights[prefix][num] === 'undefined') {
 				weights[prefix][num] = {};
 			}
+			
 			let dataset = self.model_state_dict.get(fullName);
 			weights[prefix][num][attn_layer_name] = tf.tensor(dataset.value, dataset.shape);
 		}
@@ -294,6 +301,7 @@ export class Whisper extends tf.layers.Layer {
 					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
 				}
 			}
+
 			if (name.includes('decoder')) {
 				if (!name.includes('blocks')) {
 					let dataset = this.model_state_dict.get(name);
