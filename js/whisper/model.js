@@ -357,7 +357,7 @@ export class Whisper extends tf.layers.Layer {
 	}
 
 	call(mel, tokens) {
-		this.decoder.apply(tokens, this.encoder(mel));
+		return this.decoder.apply(tokens, this.encoder(mel));
 	}
 
 	
