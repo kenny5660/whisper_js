@@ -386,7 +386,7 @@ export class Whisper extends tf.layers.Layer {
 	}
 
 	isMultilingual() {
-		return this.dims.nVocab == 51865;
+		return this.dims.get('n_vocab').value == 51865;
 	}
 
 }

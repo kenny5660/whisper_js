@@ -63,8 +63,8 @@ class DecodingTask {
 		this.options = this.verifyOptions(options);
 
 		this.nGroup = options.beamSize ? options.beamSize : options.bestOf ? options.bestOf : 1;
-		this.nCtx = model.dims.nTextCtx;
-		this.sampleLen = options.sampleLen ? options.sampleLen : Math.floor(model.dims.nTextCtx / 2);
+		this.nCtx = model.dims.get('n_text_ctx').value;
+		this.sampleLen = options.sampleLen ? options.sampleLen : Math.floor(this.nCtx / 2);
 
 		this.sotSequence = [ ...tokenizer.sotSequence ];
 		if (this.options.withoutTimestamps) {
@@ -161,13 +161,11 @@ class DecodingTask {
 		let audioFeatures;
 
 		if (
-			mel.shape[mel.shape.length - 2] === this.model.dims.nAudioCtx &&
-			mel.shape[mel.shape.length - 1] === this.model.dims.nAudioState
+			mel.shape[mel.shape.length - 2] === this.dims.get('n_audio_ctx').value &&
+			mel.shape[mel.shape.length - 1] === this.dims.get('n_audio_state').value
 		) {
 			audioFeatures = mel;
 		} else {
-			// throw new Error('input is mel only now');
-			// TODO
 			audioFeatures = this.model.encoder.apply(mel);
 		}
 		return audioFeatures;
@@ -179,13 +177,6 @@ class DecodingTask {
 		let langProbs = [];
 		if (!this.options.language || this.options.task === 'lang_id') {
 			throw new Error('specify language');
-			// [ langTokens, langProbs ] = this.model.detectLanguage(audioFeatures, this.tokenizer);
-			// maxProb(langProbs);
-			// for (let i = 0; i < languages.length; i++) {
-			// 	languages[i] = maxProb(langProbs)[0];
-			// }
-			// NO IDEA
-			// if (!this.options.language) tokens =
 		}
 		return languages, langProbs;
 	}
@@ -282,20 +273,6 @@ class DecodingTask {
 			let str = tokenizer.decode(t);
 			texts.push(str.trim());
 		}
-
-		// let newSumLogprobs = new Array();
-		// for (let i = 0; i < sumLogprobs.length; i++) {
-		// 	let idx = selected[i]; //to int
-		// 	let lp = sumLogprobs[i];
-		// 	newSumLogprobs.push(lp[i]);
-		// }
-
-		// let newAvgLogprobs = new Array();
-		// for (let i = 0; i < sumLogprobs.length; i++) {
-		// 	let t = tokens.gather(i);
-		// 	let lp = sumLogprobs[i];
-		// 	newSumLogprobs.push(lp / (t.shape[0] + 1));
-		// }
 
 		let results = new Array();
 		for (let i = 0; i < audio_features.shape[0]; i++) {
