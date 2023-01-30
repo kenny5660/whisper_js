@@ -1,6 +1,6 @@
-const tf = require('@tensorflow/tfjs');
+import * as tf from '@tensorflow/tfjs';
 
-class MaximumLikelihoodRanker {
+export class MaximumLikelihoodRanker {
     constructor(lengthPenalty) {
         this.lengthPenalty = lengthPenalty;
     }

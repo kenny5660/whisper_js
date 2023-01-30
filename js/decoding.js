@@ -1,11 +1,7 @@
 import * as tf from '@tensorflow/tfjs';
-import { maxProb, assignColumn } from './utils.js';
-import { GreedyDecoder, MaximumLikelihoodRanker } from './greedy_decoder.js';
-
-// const tf = require('@tensorflow/tfjs');
-// const { assignColumn } = require('./utils.js');
-// const getTokenizer = require('./tokenizer.js');
-// const { GreedyDecoder, MaximumLikelihoodRanker } = require('./decoders.js');
+import { GreedyDecoder } from './greedy_decoder.js';
+import {MaximumLikelihoodRanker} from './maximum_likehood_ranker.js';
+import { getTokenizer } from './tokenizer/tokenizer.js';
 
 class DecodingResult {
 	constructor(
@@ -33,6 +29,20 @@ class DecodingResult {
 	}
 }
 
+function assignColumn(tensor, cols, value) {
+	let buffer = tensor.bufferSync();
+	const rank = tensor.shape.length;
+	for (let row = 0; row < buffer.shape[0]; row++) {
+		for (let col in cols) {
+			if (rank === 3) {
+				for (let z = 0; z < tensor.shape[2]; z++) {
+					buffer.set(value, row, col, z);
+				}
+			} else buffer.set(value, row, col);
+		}
+	}
+	return buffer.toTensor();
+}
 class SuppressTokens {
 	constructor(suppressTokens) {
 		this.suppressTokens = [ ...suppressTokens ];
@@ -47,6 +57,7 @@ class DecodingTask {
 	constructor(model, options) {
 		this.model = model;
 		let language = options.language ? options.language : 'en';
+		console.log(getTokenizer);
 		let tokenizer = getTokenizer(model.isMultilingual(), options.task, language);
 		this.tokenizer = tokenizer;
 		this.options = this.verifyOptions(options);

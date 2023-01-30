@@ -1,5 +1,13 @@
 import * as tf from '@tensorflow/tfjs';
 
+import vocab_en from './gpt2/vocab.json';
+import nonSpeechTokens_en from './gpt2/non_speech_tokens.json';
+import specialTokensMap_en from './gpt2/special_tokens_map.json';
+
+import vocab_ml from './multilingual/vocab.json';
+import nonSpeechTokens_ml from './multilingual/non_speech_tokens.json';
+import specialTokensMap_ml from './multilingual/special_tokens_map.json';
+
 const LANGUAGES = {
 	en: 'english',
 	zh: 'chinese',
@@ -118,19 +126,25 @@ const TO_LANGUAGE_CODE = {
 	castilian: 'es'
 };
 
+
+
 class Tokenizer {
 	constructor(name) {
-		// this.path = '../whisper_project/whisper/assets/' + name;
 		this.path = name;
-		this.vocab = require(this.path + '\\vocab.json');
-		this.nonSpeechTokens = require(this.path + '\\non_speech_tokens.json')['non_speech_tokens'];
-		this.specialTokensMap = require(this.path + '\\special_tokens_map.json');
-		this.name = name;
-		if (this.name == 'multilingual') {
+		if (name == 'multilingual') {
+			this.vocab = vocab_ml;
+			this.nonSpeechTokens = nonSpeechTokens_ml['non_speech_tokens'];
+			this.specialTokensMap = specialTokensMap_ml;
 			const addedTokens = require(this.path + '\\added_tokens.json');
 			this.vocab = { ...this.vocab, ...addedTokens };
+		} else {
+			this.vocab = vocab_en;
+			this.nonSpeechTokens = nonSpeechTokens_en['non_speech_tokens'];
+			this.specialTokensMap = specialTokensMap_en;
 		}
-
+		
+		this.name = name;
+		
 		let allSpecialIds = [];
 		for (let key in this.specialTokensMap) {
 			allSpecialIds.push(this.vocab[this.specialTokensMap[key]]);
@@ -203,7 +217,7 @@ function buildTokenizer(name) {
 	// tokenizer
 }
 
-function getTokenizer(multilingual, task, language) {
+export function getTokenizer(multilingual, task, language) {
 	if (language) {
 		language = language.toLowerCase();
 		if (!(language in LANGUAGES)) {
@@ -239,4 +253,3 @@ function getTokenizer(multilingual, task, language) {
 	return tokenizer;
 }
 
-module.exports = getTokenizer;

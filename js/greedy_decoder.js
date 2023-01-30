@@ -1,6 +1,7 @@
-const tf = require('@tensorflow/tfjs');
+import * as tf from '@tensorflow/tfjs';
 
-class GreedyDecoder {
+
+export class GreedyDecoder {
 	constructor(temperature, eot) {
 		this.temperature = temperature;
 		this.eot = eot;

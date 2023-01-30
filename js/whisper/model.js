@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
+import { DecodingTask } from '../decoding.js';
 
 class MultiHeadAttention extends tf.layers.Layer {
 	constructor(nState, nHead, weights) {
@@ -92,14 +93,16 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		this.attn = new MultiHeadAttention(nState, nHead, weights);
 		this.attn_ln = tf.layers.layerNormalization({
 			inputShape: nState,
-			weights: [ weights['attn_ln.weight'], weights['attn_ln.bias'] ]
+			weights: [ weights['attn_ln.weight'], weights['attn_ln.bias'] ],
+			trainable: false
 		});
 
 		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead, weights) : null;
 		this.cross_attn_ln = crossAttention
 			? tf.layers.layerNormalization({
 					inputShape: nState,
-					weights: [ weights['cross_attn_ln.weight'], weights['cross_attn_ln.bias'] ]
+					weights: [ weights['cross_attn_ln.weight'], weights['cross_attn_ln.bias'] ],
+					trainable: false
 				})
 			: null;
 
@@ -117,7 +120,8 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		});
 		this.mlpLn = tf.layers.layerNormalization({
 			inputShape: nState,
-			weights: [ weights['mlp_ln.weight'], weights['mlp_ln.bias'] ]
+			weights: [ weights['mlp_ln.weight'], weights['mlp_ln.bias'] ],
+			trainable: false
 		});
 	}
 
@@ -183,33 +187,17 @@ class AudioEncoder extends tf.layers.Layer {
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
-			weights: [ weights['encoder.ln_post.weight'], weights['encoder.ln_post.bias'] ]
+			weights: [ weights['encoder.ln_post.weight'], weights['encoder.ln_post.bias'] ],
+			trainable: false
 		});
 	}
 
 	call(x) {
-		// x = this.conv1.apply(x);
-		// x = this.gelu.apply(x);
-		// x = x.transpose([ 0, 2, 1 ]);
-		// x = this.conv2.apply(x);
-		// x = this.gelu.apply(x);
-
-		// ugly pad
 		// x.shape == [1, 80, 3000]
 		function pad(x) {
 			let padding = tf.zeros([ 1, x.shape[1], 1 ]);
 			return padding.concat(x.concat(padding, 2), 2);
 		}
-		// x = pad(x).transpose([ 0, 2, 1 ]);
-		// x = tf.conv1d(x, this.conv1_weights[0], 1, 0);
-		// x = x.add(this.conv1_weights[1].reshape([ 1, 1, -1 ]));
-		// x = this.gelu.apply(x);
-
-		// x = pad(x.transpose([ 0, 2, 1 ])).transpose([ 0, 2, 1 ]);
-		// x = tf.conv1d(x, this.conv2_weights[0], 2, 0);
-		// x = x.add(this.conv2_weights[1].reshape([ 1, 1, -1 ]));
-		// x = this.gelu.apply(x);
-
 		x = pad(x);
 		x = this.conv1.apply(x);
 		x = this.gelu.apply(x);
@@ -251,7 +239,8 @@ class TextDecoder extends tf.layers.Layer {
 		}
 		this.ln = tf.layers.layerNormalization({
 			inputShape: nState,
-			weights: [ weights['decoder.ln.weight'], weights['decoder.ln.bias'] ]
+			weights: [ weights['decoder.ln.weight'], weights['decoder.ln.bias'] ],
+			trainable: false
 		});
 
 		const triuMask = tf.fill([ n_ctx, n_ctx ], -Infinity).arraySync().map((array, i) => {
@@ -370,4 +359,34 @@ export class Whisper extends tf.layers.Layer {
 	call(mel, tokens) {
 		this.decoder.apply(tokens, this.encoder(mel));
 	}
+
+	
+	decode(mel, options) {
+		options = {
+			'task': 'transcribe',
+			'language': 'en',
+			'temperature': 0.0,
+			'sampleLen': null,
+			'bestOf': null,
+			'beamSize': null,
+			'patience': null,
+			'lengthPenalty': null,
+			'prompt': null,
+			'prefix': null,
+			'suppressBlank': true,
+			'suppressTokens': '-1',
+			'withoutTimestamps': true,
+			'maxInitialTimestamp': 1.0,
+		}
+		const single = mel.shape.length === 2;
+		if (single) mel = mel.expandDims(0);
+		let result = new DecodingTask(this, options).run(mel);
+		if (single) result = result[0];
+		return result;
+	}
+
+	isMultilingual() {
+		return this.dims.nVocab == 51865;
+	}
+
 }

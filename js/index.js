@@ -84,11 +84,8 @@ class App{
         mel = tf.tensor(mel)
         console.log(mel)
         console.log("Run whisper")
-        let audio_features = this.whisper.embed_audio(mel);
-        let tokens = this.weights.get("decoder.token_embedding.weight");
-        console.log("tokens ")
-        console.log(tokens)
-        return this.whisper.logits(tokens, audio_features);
+        let result = this.whisper.decode(mel);
+        return result;
     }
    
 }
