@@ -15,14 +15,12 @@
  * =============================================================================
  */
 
-import * as tf from '@tensorflow/tfjs';
-import fetchProgress from "fetch-progress"
-import formatBytes from "format-bytes"
-import { Weights } from './Weights';
+
 import { WeightsDownloader } from './WeightsDownloader';
 import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
-
+import { Whisper } from './whisper/model.js';
+import * as tf from '@tensorflow/tfjs';
 const MODELS_URL = {
     "tiny.en": "tiny.en.h5",
     "tiny": "tiny.h5",
@@ -35,7 +33,7 @@ const MODELS_URL = {
     "large": "large.h5"
 }
 class App{
-
+ 
     constructor() {
         this.weights = null;
         
@@ -52,10 +50,19 @@ class App{
         this.input_audiofile.onchange = (event) => this.onchangeInputAudioFile(event)
         this.mdlProgressInitDone = false;
         let self = this;
-        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar,this.gui_model_status);
+        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar, this.gui_model_status);
+        this.whisper = null
     }
     onchangeInputAudioFile(event) {
         console.log(this.input_audiofile.files[0]);
+        var fileread = new FileReader();
+        let self = this;
+        fileread.onload = function() {
+            let json = JSON.parse(fileread.result);
+            self.run_model(json.mel).then(res => console.log(res))
+          };
+          fileread.readAsText(this.input_audiofile.files[0]);
+        
 
     }
     onchangeSelectModel(obj) {
@@ -68,9 +75,20 @@ class App{
     }
     weightsReady(self,weights) {
         self.weights = weights
-        self.modelReady = true;
+        self.whisper = new Whisper(self.weights.weights);
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
+        self.modelReady = true;
+    }
+    async run_model(mel) {
+        mel = tf.tensor(mel)
+        console.log(mel)
+        console.log("Run whisper")
+        let audio_features = this.whisper.embed_audio(mel);
+        let tokens = this.weights.get("decoder.token_embedding.weight");
+        console.log("tokens ")
+        console.log(tokens)
+        return this.whisper.logits(tokens, audio_features);
     }
    
 }
