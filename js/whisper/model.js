@@ -229,7 +229,7 @@ class TextDecoder extends tf.layers.Layer {
 			inputDim: nVocab,
 			outputDim: nState,
 			trainable: false,
-			weights: weights['decoder.token_embedding.weight']
+			weights: [weights['decoder.token_embedding.weight']]
 		});
 		// this.positionalEmbedding = tf.zeros([ n_ctx, nState ]);
 		this.positionalEmbedding = weights['decoder.positional_embedding'];
@@ -353,7 +353,7 @@ export class Whisper extends tf.layers.Layer {
 	}
 
 	logits(tokens, audio_features) {
-		this.decoder.apply(tokens, audio_features);
+		return this.decoder.apply(tokens, audio_features);
 	}
 
 	call(mel, tokens) {
