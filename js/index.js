@@ -21,6 +21,7 @@ import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
 import { Whisper } from './whisper/model.js';
 import * as tf from '@tensorflow/tfjs';
+import * as load_audio from "./load_audio.js"
 const MODELS_URL = {
     "tiny.en": "tiny.en.h5",
     "tiny": "tiny.h5",
@@ -52,18 +53,17 @@ class App{
         let self = this;
         this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar, this.gui_model_status);
         this.whisper = null
+        tf.tensor().print()
     }
     onchangeInputAudioFile(event) {
-        console.log(this.input_audiofile.files[0]);
-        var fileread = new FileReader();
-        let self = this;
-        fileread.onload = function() {
-            let json = JSON.parse(fileread.result);
-            self.run_model(json.mel).then(res => console.log(res))
-          };
-          fileread.readAsText(this.input_audiofile.files[0]);
-        
-
+        let file = this.input_audiofile.files[0]
+        console.log(file);
+        if (file.name.split('.').pop() == "json") {
+            file.text().then(JSON.parse).then(res => tf.tensor(res.mel)).then((res) => this.run_model(res)).then(res => console.log(res));
+        }
+        else {
+            file.arrayBuffer().then(load_audio.loadAudio).then(load_audio.logMelSpectrogram).then((res) => this.run_model(res)).then(res => console.log(res));
+        }
     }
     onchangeSelectModel(obj) {
         console.log("Select model :", obj.value);
@@ -80,14 +80,13 @@ class App{
         console.log(self.weights)
         self.modelReady = true;
     }
-    async run_model(mel) {
-        mel = tf.tensor(mel)
-        console.log(mel)
+    async run_model(mel_audio) {
         console.log("Run whisper")
-        let audio_features = this.whisper.embed_audio(mel);
+        console.log(mel_audio)
+        let audio_features = this.whisper.embed_audio(mel_audio);
         let tokens = this.weights.get("decoder.token_embedding.weight");
-        console.log("tokens ")
-        console.log(tokens)
+        console.log("audio_features ")
+        console.log(audio_features)
         return this.whisper.logits(tokens, audio_features);
     }
    

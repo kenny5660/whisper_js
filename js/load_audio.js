@@ -26,12 +26,11 @@ const CHUNK_LENGTH = 30
 const N_SAMPLES = CHUNK_LENGTH * SAMPLE_RATE  // 480000: number of samples in a chunk
 const N_FRAMES = exact_div(N_SAMPLES, HOP_LENGTH)  // 3000: number of frames in a mel spectrogram input
 
-async function loadAudio(fileDirectory) {
+export async function loadAudio(arrayBuffer) {
 
-    let response = await fetch(fileDirectory);
-    let buffer = await response.arrayBuffer();
-    let data = await audioCtx.decodeAudioData(buffer);
-
+    audioCtx.sampleRate = SAMPLE_RATE;
+    let data = await audioCtx.decodeAudioData(arrayBuffer);
+    console.log(data)
     let offlineCtx = new OfflineAudioContext(data.numberOfChannels,
         data.duration * SAMPLE_RATE,
         SAMPLE_RATE);
@@ -43,16 +42,20 @@ async function loadAudio(fileDirectory) {
     let resampled = await offlineCtx.startRendering();
 
     let decodedData = new Float32Array(resampled.length);
-
+    
     resampled.copyFromChannel(decodedData, 0, 0);
+
+    console.log(resampled)
+    const source = audioCtx.createBufferSource();
+    source.buffer = resampled;
+    source.connect(audioCtx.destination);
+    source.start();
 
     return tf.tensor(decodedData);
 
 };
 
-async function logMelSpectrogram(fileDirectory) {
-
-    let audio = await loadAudio(fileDirectory);
+export function logMelSpectrogram(audio) {
 
     let stft = tf.signal.stft(audio, N_FFT, HOP_LENGTH, N_FFT, tf.signal.hannWindow);
     let magnitudes = tf.abs(stft).pow(2).transpose();
