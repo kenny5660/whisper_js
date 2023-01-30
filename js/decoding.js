@@ -161,8 +161,8 @@ class DecodingTask {
 		let audioFeatures;
 
 		if (
-			mel.shape[mel.shape.length - 2] === this.dims.get('n_audio_ctx').value &&
-			mel.shape[mel.shape.length - 1] === this.dims.get('n_audio_state').value
+			mel.shape[mel.shape.length - 2] === this.model.dims.get('n_audio_ctx').value &&
+			mel.shape[mel.shape.length - 1] === this.model.dims.get('n_audio_state').value
 		) {
 			audioFeatures = mel;
 		} else {
