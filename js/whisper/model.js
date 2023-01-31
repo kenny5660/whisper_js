@@ -93,6 +93,7 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		this.attn = new MultiHeadAttention(nState, nHead, weights);
 		this.attn_ln = tf.layers.layerNormalization({
 			inputShape: nState,
+			epsilon: 1e-5,
 			weights: [ weights['attn_ln.weight'], weights['attn_ln.bias'] ],
 			trainable: false
 		});
@@ -101,6 +102,7 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		this.cross_attn_ln = crossAttention
 			? tf.layers.layerNormalization({
 					inputShape: nState,
+					epsilon: 1e-5,
 					weights: [ weights['cross_attn_ln.weight'], weights['cross_attn_ln.bias'] ],
 					trainable: false
 				})
@@ -120,6 +122,7 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		});
 		this.mlpLn = tf.layers.layerNormalization({
 			inputShape: nState,
+			epsilon: 1e-5,
 			weights: [ weights['mlp_ln.weight'], weights['mlp_ln.bias'] ],
 			trainable: false
 		});
@@ -187,6 +190,7 @@ class AudioEncoder extends tf.layers.Layer {
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
+			epsilon: 1e-5,
 			weights: [ weights['encoder.ln_post.weight'], weights['encoder.ln_post.bias'] ],
 			trainable: false
 		});
@@ -239,14 +243,15 @@ class TextDecoder extends tf.layers.Layer {
 		}
 		this.ln = tf.layers.layerNormalization({
 			inputShape: nState,
+			epsilon: 1e-5,
 			weights: [ weights['decoder.ln.weight'], weights['decoder.ln.bias'] ],
 			trainable: false
 		});
 
-		const triuMask = tf.fill([ n_ctx, n_ctx ], -Infinity).arraySync().map((array, i) => {
+		const triuMask = tf.fill([ n_ctx, n_ctx ], -1e18).arraySync().map((array, i) => {
 			return array.map((num, j) => {
-				if (j > i) return 0;
-				return num;
+				if (j > i) return num;
+				return 0;
 			});
 		});
 		this.mask = tf.tensor(triuMask);
@@ -263,7 +268,7 @@ class TextDecoder extends tf.layers.Layer {
 		const secondDimLen = this.positionalEmbedding.shape[this.positionalEmbedding.shape.length - 1];
 		const positionalEmbedding = this.positionalEmbedding.slice(
 			[ offset, 0 ],
-			[ offset + firstDimLen, secondDimLen ]
+			[ firstDimLen, secondDimLen ]
 		);
 		x = xEmbeddedTokens.add(positionalEmbedding);
 		x = x.cast(xa.dtype);

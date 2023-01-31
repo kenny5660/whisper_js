@@ -49,7 +49,7 @@ class SuppressTokens {
 	}
 
 	apply(logits, tokens) {
-		return [ assignColumn(logits, this.suppressTokens, Infinity), tokens ];
+		return [ assignColumn(logits, this.suppressTokens, 1e18), tokens ];
 	}
 }
 
@@ -205,15 +205,14 @@ class DecodingTask {
 				// 	data.push(probsAtSotT.gather(j).arraySync());
 				// }
 				noSpeechProb = tf.transpose(probsAtSotT.gather(this.tokenizer.noSpeech)).arraySync();
-
-				logits = logits.gather(logits.shape[1] - 1, 1);
+			}
+			logits = logits.gather(logits.shape[1] - 1, 1);
 				for (let logitFilter of this.logitFilters) {
 					[ logits, tokens ] = logitFilter.apply(logits, tokens);
 				}
 				let completed;
 				[ tokens, completed ] = this.decoder.update(tokens, logits, sumLogprobs);
 				if (completed || tokens.shape[tokens.shape.length - 1] > n_cts) break;
-			}
 		}
 		return [ tokens, sumLogprobs, noSpeechProb ];
 	}
