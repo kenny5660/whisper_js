@@ -2,12 +2,10 @@ import * as tf from '@tensorflow/tfjs';
 import { DecodingTask } from '../decoding.js';
 
 class MultiHeadAttention extends tf.layers.Layer {
-	constructor(nState, nHead, weights) {
+	constructor(nState, nHead, weights, prefix) {
 		super({});
 		// this.nState = nState;
 		this.nHead = nHead;
-
-		const prefix = Object.keys(weights)[0].split('.')[0]; // {'cross_attn', 'attn'}
 
 		this.query = tf.layers.dense({
 			inputShape: nState,
@@ -90,7 +88,7 @@ class GeLU extends tf.layers.Layer {
 class ResidualAttentionBlock extends tf.layers.Layer {
 	constructor(nState, nHead, weights, crossAttention = false) {
 		super();
-		this.attn = new MultiHeadAttention(nState, nHead, weights);
+		this.attn = new MultiHeadAttention(nState, nHead, weights, 'attn');
 		this.attn_ln = tf.layers.layerNormalization({
 			inputShape: nState,
 			epsilon: 1e-5,
@@ -98,7 +96,7 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 			trainable: false
 		});
 
-		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead, weights) : null;
+		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead, weights, 'cross_attn') : null;
 		this.cross_attn_ln = crossAttention
 			? tf.layers.layerNormalization({
 					inputShape: nState,
