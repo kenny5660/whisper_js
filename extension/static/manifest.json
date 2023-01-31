@@ -1,0 +1,15 @@
+{
+    "name": "Wisper js",
+    "description": "Whisper.js is port of Whisper speech recognition model to JavaScript.",
+    "version": "1.0",
+    "manifest_version": 3,
+    "icons": {
+        "32":"voice-recognition-32px.png",
+        "128":"voice-recognition-128px.png"
+    },
+    "action": {
+        "default_popup":"popup.html"
+    },
+    "permissions": [],
+    "background":{}
+}
