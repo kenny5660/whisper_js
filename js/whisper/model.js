@@ -392,4 +392,46 @@ export class Whisper extends tf.layers.Layer {
 		return this.dims.get('n_vocab').value == 51865;
 	}
 
+	installKvCacheHooks(cache = {}) {
+		let hooks = [];
+
+		function saveToCache(layer, outputs) {
+			let module = layer.name;  // нужно название layer, если оно есть по дефолту - класс, иначе костылить
+			let output = outputs;  // посчитанный key/value, лишняя строчка, для коммита
+
+			if (!cache[module] || output.shape[1] > self.decoder.positionalEmbedding.shape[0]) {
+				cache[module] = output.clone();
+			} else {
+				cache[module] = tf.concat([cache[module], output], 1);
+			}
+
+			return cache[module];
+		}
+
+
+		// если layers не сработает, заменить на :
+		// for (const layer in self.decoder) {
+		// 	if (self.decoder.hasOwnProperty(layer) && self.decoder[layer] instanceof ResidualAttentionBlock) {
+		// 		hooks.push(layer.attn.key);
+		// 		hooks.push(layer.attn.value);
+		// 		hooks.push(layer.cross_attn.key)
+		// 		hooks.push(layer.cross_attn.value)
+		// 	}
+		// }
+		this.decoder.layers.forEach((layer) => {
+			if (layer instanceof ResidualAttentionBlock) {
+				const cache_att_key = saveToCache(layer.attn, layer.attn.key)
+				const cache_att_value = saveToCache(layer.attn, layer.attn.value)
+				const cache_cross_attn_key = saveToCache(layer.cross_attn, layer.cross_attn.key)
+				const cache_cross_attn_value = saveToCache(layer.cross_attn, layer.cross_attn.value)
+				hooks.push(cache_att_key);
+				hooks.push(cache_att_value);
+				hooks.push(cache_cross_attn_key)
+				hooks.push(cache_cross_attn_value)
+			}
+		});
+
+		return {cache, hooks};
+	}
+
 }
