@@ -37,3 +37,15 @@ class MaximumLikelihoodRanker {
     }
 }
 
+//
+// const ranker = new MaximumLikelihoodRanker(0.6);
+//
+// const tokens = [
+//     [tf.tensor1d([1, 2, 3]), tf.tensor1d([4, 5, 6]), tf.tensor1d([7, 8, 9])],
+//     [tf.tensor1d([10, 11, 12]), tf.tensor1d([13, 14, 15]), tf.tensor1d([16, 17, 18])]
+// ];
+// const sumLogProbs = [tf.tensor1d([-3.4, -2.5, -1.6]), tf.tensor1d([-4.5, -3.6, -2.7])];
+//
+// const indices = ranker.rank(tokens, sumLogProbs);
+// console.log(indices.dataSync());
+
