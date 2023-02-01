@@ -33,11 +33,18 @@ const MODELS_URL = {
     "medium": "medium.h5",
     "large": "large.h5"
 }
-class App{
- 
+
+function preprocessAudio(file) {
+    return file.arrayBuffer()
+        .then(load_audio.loadAudio)
+        .then(load_audio.logMelSpectrogram);
+};
+
+class App {
+
     constructor() {
         this.weights = null;
-        
+
         this.modelReady = false;
         this.current_model_name = ""
         this.gui_select_model = document.getElementById("select-model");
