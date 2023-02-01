@@ -3,9 +3,9 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 import * as tf from "@tensorflow/tfjs";
 import filters from './filters.json';
 
-function exact_div(x, y){
+function exactDiv(x, y) {
 
-    return Math.floor(x/y);
+    return Math.floor(x / y);
 
 };
 
