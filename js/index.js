@@ -15,14 +15,13 @@
  * =============================================================================
  */
 
-import * as tf from '@tensorflow/tfjs';
-import fetchProgress from "fetch-progress"
-import formatBytes from "format-bytes"
-import { Weights } from './Weights';
+
 import { WeightsDownloader } from './WeightsDownloader';
 import * as ui from 'material-design-lite';
 import 'material-icons/iconfont/material-icons.css';
-
+import { Whisper } from './whisper/model.js';
+import * as tf from '@tensorflow/tfjs';
+import * as load_audio from "./load_audio.js"
 const MODELS_URL = {
     "tiny.en": "tiny.en.h5",
     "tiny": "tiny.h5",
@@ -35,7 +34,7 @@ const MODELS_URL = {
     "large": "large.h5"
 }
 class App{
-
+ 
     constructor() {
         this.weights = null;
         
@@ -43,13 +42,29 @@ class App{
         this.current_model_name = ""
         this.gui_select_model = document.getElementById("select-model");
         this.gui_model_progressbar = document.getElementById("model-progressbar");
+
         this.gui_model_status = document.getElementById("model-status");
         this.gui_select_model.onchange = () => this.onchangeSelectModel(this.gui_select_model)
+
+        this.input_audiofile = document.getElementById("input_audiofile");
+
+        this.input_audiofile.onchange = (event) => this.onchangeInputAudioFile(event)
         this.mdlProgressInitDone = false;
         let self = this;
-        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar,this.gui_model_status);
+        this.weightsDownloader = new WeightsDownloader(this.gui_model_progressbar, this.gui_model_status);
+        this.whisper = null
+        tf.tensor().print()
     }
-    
+    onchangeInputAudioFile(event) {
+        let file = this.input_audiofile.files[0]
+        console.log(file);
+        if (file.name.split('.').pop() == "json") {
+            file.text().then(JSON.parse).then(res => tf.tensor(res.mel)).then((res) => this.run_model(res)).then(res => console.log(res));
+        }
+        else {
+            file.arrayBuffer().then(load_audio.loadAudio).then(load_audio.logMelSpectrogram).then((res) => this.run_model(res)).then(res => console.log(res));
+        }
+    }
     onchangeSelectModel(obj) {
         console.log("Select model :", obj.value);
         this.current_model_name = obj.value;
@@ -60,9 +75,19 @@ class App{
     }
     weightsReady(self,weights) {
         self.weights = weights
-        self.modelReady = true;
+        self.whisper = new Whisper(self.weights.weights);
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
+        self.modelReady = true;
+    }
+    async run_model(mel_audio) {
+        console.log("Run whisper")
+        console.log(mel_audio)
+        let audio_features = this.whisper.embed_audio(mel_audio);
+        let tokens = this.weights.get("decoder.token_embedding.weight");
+        console.log("audio_features ")
+        console.log(audio_features)
+        return this.whisper.logits(tokens, audio_features);
     }
    
 }
