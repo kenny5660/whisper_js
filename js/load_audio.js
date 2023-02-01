@@ -30,7 +30,6 @@ const N_FRAMES = exact_div(N_SAMPLES, HOP_LENGTH)  // 3000: number of frames in 
 export async function loadAudio(arrayBuffer) {
 
     let data = await audioCtx.decodeAudioData(arrayBuffer);
-    console.log(arrayBuffer);
 
     let offlineCtx = new OfflineAudioContext(data.numberOfChannels,
                                              data.duration * SAMPLE_RATE,
