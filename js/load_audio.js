@@ -3,13 +3,13 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 import * as tf from "@tensorflow/tfjs";
 import filters from './filters.json';
 
-function exact_div(x, y) {
+function exact_div(x, y){
 
-    return Math.floor(x / y);
+    return Math.floor(x/y);
 
 };
 
-function log10(x) {
+function log10(x){
 
     let x1 = tf.log(x);
     let x2 = tf.log(10.0);
@@ -26,16 +26,16 @@ const CHUNK_LENGTH = 30
 const N_SAMPLES = CHUNK_LENGTH * SAMPLE_RATE  // 480000: number of samples in a chunk
 const N_FRAMES = exact_div(N_SAMPLES, HOP_LENGTH)  // 3000: number of frames in a mel spectrogram input
 
-async function loadAudio(fileDirectory) {
 
-    let response = await fetch(fileDirectory);
-    let buffer = await response.arrayBuffer();
-    let data = await audioCtx.decodeAudioData(buffer);
+export async function loadAudio(arrayBuffer) {
+
+    let data = await audioCtx.decodeAudioData(arrayBuffer);
+    console.log(arrayBuffer);
 
     let offlineCtx = new OfflineAudioContext(data.numberOfChannels,
-        data.duration * SAMPLE_RATE,
-        SAMPLE_RATE);
-
+                                             data.duration * SAMPLE_RATE,
+                                             SAMPLE_RATE);
+    
     let offlineSource = offlineCtx.createBufferSource();
     offlineSource.buffer = data;
     offlineSource.connect(offlineCtx.destination);
@@ -50,9 +50,7 @@ async function loadAudio(fileDirectory) {
 
 };
 
-async function logMelSpectrogram(fileDirectory) {
-
-    let audio = await loadAudio(fileDirectory);
+export async function logMelSpectrogram(fileDirectory) {
 
     let stft = tf.signal.stft(audio, N_FFT, HOP_LENGTH, N_FFT, tf.signal.hannWindow);
     let magnitudes = tf.abs(stft).pow(2).transpose();
@@ -63,10 +61,10 @@ async function logMelSpectrogram(fileDirectory) {
     logSpec = tf.maximum(logSpec, tf.sub(logSpec.max(), 8.0).arraySync());
     logSpec = tf.div(tf.add(logSpec, 4.0), 4.0);
 
-    if (logSpec.shape[1] < N_FRAMES) {
+    if (logSpec.shape[1] < N_FRAMES){
         logSpec = tf.pad(logSpec, [[0, 0], [0, N_FRAMES - logSpec.shape[1]]]);
     };
-    if (logSpec.shape[1] > N_FRAMES) {
+    if(logSpec.shape[1] > N_FRAMES){
         logSpec = logSpec.slice([0, 0], [N_MELS, 3000])
     }
 
