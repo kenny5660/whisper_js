@@ -231,30 +231,32 @@ class DecodingTask {
 		audioFeatures = tf.tensor(Array(this.nGroup).fill(audioFeatures.arraySync()[0]));
 		tokens = tf.tensor(Array(this.nGroup).fill(tokens.arraySync()[0]));
 		let sumLogprobs, noSpeechProbs;
-		[ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
+		// [ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
+
+		
 
 		audioFeatures = audioFeatures.gather(tf.range(0, audioFeatures.shape[0], this.nGroup, 'int32'));
-		noSpeechProbs = tf.tensor(noSpeechProbs);
-		noSpeechProbs = noSpeechProbs.gather(tf.range(0, noSpeechProbs.shape[0], this.nGroup, 'int32'));
-		noSpeechProbs = noSpeechProbs.arraySync();
+		// noSpeechProbs = tf.tensor(noSpeechProbs);
+		// noSpeechProbs = noSpeechProbs.gather(tf.range(0, noSpeechProbs.shape[0], this.nGroup, 'int32'));
+		// noSpeechProbs = noSpeechProbs.arraySync();
 
 		tokens = tokens.reshape([ nAudio, this.nGroup, -1 ]);
 		sumLogprobs = sumLogprobs.reshape([ nAudio, this.nGroup ]);
 
 		[ tokens, sumLogprobs ] = this.decoder.finalize(tokens, sumLogprobs);
-		// let lists = new Array();
-		// for (let i = 0; i < tokens.shape[0]; i++) {
-		// 	let s = tokens.gather(i);
-		// 	let list = new Array();
-		// 	for (let j = 0; j < s.shape[0]; j++) {
-		// 		let t = s.gather(j);
-		// 		let mask = t.equal([ tokenizer.eot ]).asType('bool');
-		// 		const endIdx = tf.where(mask).flatten().gather(0);
-		// 		let item = t.slice(this.sampleBegin, endIdx);
-		// 		list.push(item);
-		// 	}
-		// 	lists.push(list);
-		// }
+		let lists = new Array();
+		for (let i = 0; i < tokens.shape[0]; i++) {
+			let s = tokens.gather(i);
+			let list = new Array();
+			for (let j = 0; j < s.shape[0]; j++) {
+				let t = s.gather(j);
+				let mask = t.equal([ tokenizer.eot ]).asType('bool');
+				const endIdx = tf.where(mask).flatten().gather(0);
+				let item = t.slice(this.sampleBegin, endIdx);
+				list.push(item);
+			}
+			lists.push(list);
+		}
 
 		let selected = this.sequenceRanker.rank(tokens, sumLogprobs);
 
