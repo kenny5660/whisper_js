@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 
-
+/*
 Выбирает сэмплы с наибольшой вероятностью.
 Вероятности нормализуются на длину токенов или по правилу Google NMT.
 from the Google NMT paper: penalty = ((5 + length) / 6) ** self.length_penalty
