@@ -39,6 +39,6 @@ export class GreedyDecoder {
 		// tokens = tokens.concat(tf.fill([ tokens.shape[0], 1 ], this.eot), 1);
 		tokens = tf.pad3d(tokens, [ [ 0, 0 ], [ 0, 0 ], [ 0, 1 ] ], this.eot);
 		// tokens = tf.pad(tokens, [[0, 1]], this.eot)
-		return [ tokens, sumLogprobs.dataSync() ];
+		return [ tokens, sumLogprobs.arraySync() ];
 	}
 }

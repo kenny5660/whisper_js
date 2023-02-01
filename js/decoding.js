@@ -231,9 +231,8 @@ class DecodingTask {
 		audioFeatures = tf.tensor(Array(this.nGroup).fill(audioFeatures.arraySync()[0]));
 		tokens = tf.tensor(Array(this.nGroup).fill(tokens.arraySync()[0]));
 		let sumLogprobs, noSpeechProbs;
-		// [ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
-
-		
+		[ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
+		console.log(sumLogprobs);
 
 		audioFeatures = audioFeatures.gather(tf.range(0, audioFeatures.shape[0], this.nGroup, 'int32'));
 		// noSpeechProbs = tf.tensor(noSpeechProbs);
@@ -251,31 +250,32 @@ class DecodingTask {
 			for (let j = 0; j < s.shape[0]; j++) {
 				let t = s.gather(j);
 				let mask = t.equal([ tokenizer.eot ]).asType('bool');
-				const endIdx = tf.where(mask).flatten().gather(0);
-				let item = t.slice(this.sampleBegin, endIdx);
+				const endIdx = mask.arraySync().indexOf(1);
+				let item = t.slice(this.sampleBegin, endIdx - this.sampleBegin).arraySync();
 				list.push(item);
 			}
 			lists.push(list);
 		}
-
+		tokens = lists;
 		let selected = this.sequenceRanker.rank(tokens, sumLogprobs);
 
 		let newTokens = new Array();
-		for (let i = 0; i < tokens.shape[0]; i++) {
-			let idx = selected[i]; //to int
-			let t = tokens.gather(i);
-			newTokens.push(t.gather(idx));
+		for (let i = 0; i < tokens.length; i++) {
+			let idx = Math.floor(selected[i]); //to int
+			let t = tokens[i];
+			newTokens.push(t[idx]);
 		}
 
 		let texts = new Array();
-		for (let i = 0; i < newTokens.shape[0]; i++) {
+		for (let i = 0; i < newTokens.length; i++) {
 			let t = newTokens[i];
-			let str = tokenizer.decode(t);
-			texts.push(str.trim());
+			let words = tokenizer.decode(t);
+
+			texts.push(words.map(x => x.trim()));
 		}
 
 		let results = new Array();
-		for (let i = 0; i < audio_features.shape[0]; i++) {
+		for (let i = 0; i < audioFeatures.shape[0]; i++) {
 			const text = texts[i];
 			const lang = languages[i];
 			// const tokens = newTokens[i];
