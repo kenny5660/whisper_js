@@ -64,9 +64,6 @@ export async function logMelSpectrogram(fileDirectory) {
     if (logSpec.shape[1] < N_FRAMES) {
         logSpec = tf.pad(logSpec, [[0, 0], [0, N_FRAMES - logSpec.shape[1]]]);
     };
-    if(logSpec.shape[1] > N_FRAMES){
-        logSpec = logSpec.slice([0, 0], [N_MELS, 3000])
-    }
 
     return logSpec;
 
