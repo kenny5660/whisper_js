@@ -160,7 +160,7 @@ class Tokenizer {
 	}
 	encode(tokens) {
 		let ids = [];
-		for (let token in tokens) {
+		for (let token of tokens) {
 			let val = this.vocab[token];
 			if (!val) val = this.vocab[this.specialTokensMap['unk_token']];
 			ids.push(val);
@@ -170,7 +170,7 @@ class Tokenizer {
 
 	decode(token_ids) {
 		let tokens = [];
-		for (let id in token_ids) {
+		for (let id of token_ids) {
 			let token = this.idToToken[id];
 			if (!token) token = this.specialTokensMap['unk_token'];
 			tokens.push(token);
