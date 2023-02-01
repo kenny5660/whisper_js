@@ -29,7 +29,8 @@ export class GreedyDecoder {
 		tokens = tokens.concat(nextTokens, -1);
 		
 		tokensLastShapeIndex = tokens.shape[tokens.shape.length - 1] - 1;
-		const completed = tf.equal(tokens.slice([0, tokensLastShapeIndex], [tokens.shape[0], 1]), this.eot).all();
+		// let completed = tf.equal(tokens.slice([0, tokensLastShapeIndex], [tokens.shape[0], 1]), this.eot).all();
+		let completed = tokens.slice([0, tokensLastShapeIndex], [tokens.shape[0], 1]).equal(this.eot).dataSync()[0];
 		return [ tokens, completed ];
 	}
 

@@ -210,6 +210,8 @@ class DecodingTask {
 			let completed;
 			[ tokens, completed ] = this.decoder.update(tokens, logits, sumLogprobs);
 			if (completed || tokens.shape[tokens.shape.length - 1] > this.nCtx) break;
+			console.log(i);
+			console.log(tokens.shape);
 		}
 		return [ tokens, sumLogprobs, noSpeechProb ];
 	}
