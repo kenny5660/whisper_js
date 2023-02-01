@@ -50,7 +50,7 @@ export async function loadAudio(arrayBuffer) {
 
 };
 
-export async function logMelSpectrogram(fileDirectory) {
+export function logMelSpectrogram(audio) {
 
     let stft = tf.signal.stft(audio, N_FFT, HOP_LENGTH, N_FFT, tf.signal.hannWindow);
     let magnitudes = tf.abs(stft).pow(2).transpose();
