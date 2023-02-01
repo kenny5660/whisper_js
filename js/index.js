@@ -22,7 +22,7 @@ import 'material-icons/iconfont/material-icons.css';
 import { Whisper } from './whisper/model.js';
 import * as tf from '@tensorflow/tfjs';
 const MODELS_URL = {
-    "tiny.en": "tiny.en1.h5",
+    "tiny.en": "tiny.en.h5",
     "tiny": "tiny.h5",
     "base.en": "base.en.h5",
     "base": "base.h5",
