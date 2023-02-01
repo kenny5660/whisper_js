@@ -17,7 +17,7 @@ export class MaximumLikelihoodRanker {
      getScores(tokens, sumLogProbs) {
         let result = [];
 
-        let penalties = tf.tensor1d(tokens.map(x => x.length));
+        let penalties = tf.tensor1d(tokens.dataSync().map(x => x.length));
         if (this.lengthPenalty) {
             penalties = penalties.mul(this.lengthPenalty).pow((penalties.add(5)).div(6));
         }
@@ -25,7 +25,7 @@ export class MaximumLikelihoodRanker {
         penalties = penalties.dataSync();
 
         for (let i = 0; i < sumLogProbs.length; i++) {
-            result.push(sumLogProbs[i].div(penalties[i]))
+            result.push(sumLogProbs.gather(i).div(penalties.gather(i)));
         }
         return result
     }
