@@ -25,7 +25,7 @@ const N_MELS = 80
 const HOP_LENGTH = 160
 const CHUNK_LENGTH = 30
 const N_SAMPLES = CHUNK_LENGTH * SAMPLE_RATE  // 480000: number of samples in a chunk
-const N_FRAMES = exact_div(N_SAMPLES, HOP_LENGTH)  // 3000: number of frames in a mel spectrogram input
+const N_FRAMES = exactDiv(N_SAMPLES, HOP_LENGTH)  // 3000: number of frames in a mel spectrogram input
 
 
 export async function loadAudio(arrayBuffer) {
