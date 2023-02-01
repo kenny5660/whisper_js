@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import { GreedyDecoder } from './greedy_decoder.js';
-import {MaximumLikelihoodRanker} from './maximum_likehood_ranker.js';
+import { MaximumLikelihoodRanker } from './maximum_likehood_ranker.js';
 import { getTokenizer } from './tokenizer/tokenizer.js';
 
 class DecodingResult {
@@ -29,16 +29,11 @@ class DecodingResult {
 	}
 }
 
-function assignColumn(tensor, cols, value) {
+function assignColumns(tensor, cols, value) {
 	let buffer = tensor.bufferSync();
-	const rank = tensor.shape.length;
 	for (let row = 0; row < buffer.shape[0]; row++) {
-		for (let col in cols) {
-			if (rank === 3) {
-				for (let z = 0; z < tensor.shape[2]; z++) {
-					buffer.set(value, row, col, z);
-				}
-			} else buffer.set(value, row, col);
+		for (let col of cols) {
+			buffer.set(value, row, col);
 		}
 	}
 	return buffer.toTensor();
@@ -49,7 +44,9 @@ class SuppressTokens {
 	}
 
 	apply(logits, tokens) {
-		return [ assignColumn(logits, this.suppressTokens, 1e18), tokens ];
+		// logits.rank == 2
+		const res = assignColumns(logits, this.suppressTokens, -1e18);
+		return [ res, tokens ];
 	}
 }
 
@@ -207,12 +204,14 @@ class DecodingTask {
 				noSpeechProb = tf.transpose(probsAtSotT.gather(this.tokenizer.noSpeech)).arraySync();
 			}
 			logits = logits.gather(logits.shape[1] - 1, 1);
-				for (let logitFilter of this.logitFilters) {
-					[ logits, tokens ] = logitFilter.apply(logits, tokens);
-				}
-				let completed;
-				[ tokens, completed ] = this.decoder.update(tokens, logits, sumLogprobs);
-				if (completed || tokens.shape[tokens.shape.length - 1] > n_cts) break;
+			for (let logitFilter of this.logitFilters) {
+				[ logits, tokens ] = logitFilter.apply(logits, tokens);
+			}
+			let completed;
+			[ tokens, completed ] = this.decoder.update(tokens, logits, sumLogprobs);
+			if (completed || tokens.shape[tokens.shape.length - 1] > this.nCtx) break;
+			console.log(i);
+			console.log(tokens.shape);
 		}
 		return [ tokens, sumLogprobs, noSpeechProb ];
 	}
@@ -233,48 +232,50 @@ class DecodingTask {
 		tokens = tf.tensor(Array(this.nGroup).fill(tokens.arraySync()[0]));
 		let sumLogprobs, noSpeechProbs;
 		[ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
+		console.log(sumLogprobs);
 
 		audioFeatures = audioFeatures.gather(tf.range(0, audioFeatures.shape[0], this.nGroup, 'int32'));
-		noSpeechProbs = tf.tensor(noSpeechProbs);
-		noSpeechProbs = noSpeechProbs.gather(tf.range(0, noSpeechProbs.shape[0], this.nGroup, 'int32'));
-		noSpeechProbs = noSpeechProbs.arraySync();
+		// noSpeechProbs = tf.tensor(noSpeechProbs);
+		// noSpeechProbs = noSpeechProbs.gather(tf.range(0, noSpeechProbs.shape[0], this.nGroup, 'int32'));
+		// noSpeechProbs = noSpeechProbs.arraySync();
 
 		tokens = tokens.reshape([ nAudio, this.nGroup, -1 ]);
 		sumLogprobs = sumLogprobs.reshape([ nAudio, this.nGroup ]);
 
 		[ tokens, sumLogprobs ] = this.decoder.finalize(tokens, sumLogprobs);
-		// let lists = new Array();
-		// for (let i = 0; i < tokens.shape[0]; i++) {
-		// 	let s = tokens.gather(i);
-		// 	let list = new Array();
-		// 	for (let j = 0; j < s.shape[0]; j++) {
-		// 		let t = s.gather(j);
-		// 		let mask = t.equal([ tokenizer.eot ]).asType('bool');
-		// 		const endIdx = tf.where(mask).flatten().gather(0);
-		// 		let item = t.slice(this.sampleBegin, endIdx);
-		// 		list.push(item);
-		// 	}
-		// 	lists.push(list);
-		// }
-
+		let lists = new Array();
+		for (let i = 0; i < tokens.shape[0]; i++) {
+			let s = tokens.gather(i);
+			let list = new Array();
+			for (let j = 0; j < s.shape[0]; j++) {
+				let t = s.gather(j);
+				let mask = t.equal([ tokenizer.eot ]).asType('bool');
+				const endIdx = mask.arraySync().indexOf(1);
+				let item = t.slice(this.sampleBegin, endIdx - this.sampleBegin).arraySync();
+				list.push(item);
+			}
+			lists.push(list);
+		}
+		tokens = lists;
 		let selected = this.sequenceRanker.rank(tokens, sumLogprobs);
 
 		let newTokens = new Array();
-		for (let i = 0; i < tokens.shape[0]; i++) {
-			let idx = selected[i]; //to int
-			let t = tokens.gather(i);
-			newTokens.push(t.gather(idx));
+		for (let i = 0; i < tokens.length; i++) {
+			let idx = Math.floor(selected[i]); //to int
+			let t = tokens[i];
+			newTokens.push(t[idx]);
 		}
 
 		let texts = new Array();
-		for (let i = 0; i < newTokens.shape[0]; i++) {
+		for (let i = 0; i < newTokens.length; i++) {
 			let t = newTokens[i];
-			let str = tokenizer.decode(t);
-			texts.push(str.trim());
+			let words = tokenizer.decode(t);
+
+			texts.push(words.map(x => x.trim()));
 		}
 
 		let results = new Array();
-		for (let i = 0; i < audio_features.shape[0]; i++) {
+		for (let i = 0; i < audioFeatures.shape[0]; i++) {
 			const text = texts[i];
 			const lang = languages[i];
 			// const tokens = newTokens[i];
