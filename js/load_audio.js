@@ -9,12 +9,13 @@ function exactDiv(x, y) {
 
 };
 
-function log10(x){
+function log10(x) {
 
     let x1 = tf.log(x);
     let x2 = tf.log(10.0);
 
     return tf.div(x1, x2);
+
 };
 
 // hard-coded audio hyperparameters
@@ -32,9 +33,9 @@ export async function loadAudio(arrayBuffer) {
     let data = await audioCtx.decodeAudioData(arrayBuffer);
 
     let offlineCtx = new OfflineAudioContext(data.numberOfChannels,
-                                             data.duration * SAMPLE_RATE,
-                                             SAMPLE_RATE);
-    
+        data.duration * SAMPLE_RATE,
+        SAMPLE_RATE);
+
     let offlineSource = offlineCtx.createBufferSource();
     offlineSource.buffer = data;
     offlineSource.connect(offlineCtx.destination);
@@ -60,7 +61,7 @@ export async function logMelSpectrogram(fileDirectory) {
     logSpec = tf.maximum(logSpec, tf.sub(logSpec.max(), 8.0).arraySync());
     logSpec = tf.div(tf.add(logSpec, 4.0), 4.0);
 
-    if (logSpec.shape[1] < N_FRAMES){
+    if (logSpec.shape[1] < N_FRAMES) {
         logSpec = tf.pad(logSpec, [[0, 0], [0, N_FRAMES - logSpec.shape[1]]]);
     };
     if(logSpec.shape[1] > N_FRAMES){
