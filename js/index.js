@@ -89,7 +89,18 @@ class App{
         console.log(audio_features)
         return this.whisper.logits(tokens, audio_features);
     }
-   
+
 }
+
+navigator.permissions.query({ name: 'microphone' }).then(function (result) {
+    if (result.state == 'granted') {
+        console.log('success');
+    } else if (result.state == 'prompt') {
+    } else if (result.state == 'denied') {
+        alert('Try again');
+    };
+    result.onchange = function () { };
+});
+
 
 var app = new App()
