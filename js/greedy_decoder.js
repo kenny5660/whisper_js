@@ -17,11 +17,12 @@ export class GreedyDecoder {
 		}
 
 		const logprobs = tf.logSoftmax(logits);
-		const currentLogprobs = tf.gather(logprobs, nextTokens, -1);
+		const currentLogprobs = tf.gather(logprobs, nextTokens, -1); // TODO temp === 0
 		const tokensLastShapeIndex = tokens.shape.length - 1;
-		sumLogprobs = sumLogprobs.add(currentLogprobs.mul(tf.notEqual(tokens.slice(tokensLastShapeIndex), this.eot)));
+		const tokensSlice = tokens.slice([0, 0], [tokens.shape[0], tokensLastShapeIndex]);
+		sumLogprobs = sumLogprobs.add(currentLogprobs.mul(tf.notEqual(tokensSlice, this.eot)));
 		nextTokens = tf.where(
-			tf.equal(tokens.slice(tokensLastShapeIndex), this.eot).transpose(),
+			tf.equal(tokensSlice, this.eot).transpose(),
 			tf.zerosLike(nextTokens).add(this.eot),
 			nextTokens
 		);
