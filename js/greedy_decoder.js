@@ -1,4 +1,5 @@
-const tf = require('@tensorflow/tfjs');
+import * as tf from '@tensorflow/tfjs';
+
 
 /*
 Жадный декодер или выбрать наиболее вероятный токен.
@@ -15,7 +16,7 @@ finalize:
 Заполняет оставшуюся последовательность eot
  */
 
-class GreedyDecoder {
+export class GreedyDecoder {
 	constructor(temperature, eot) {
 		this.temperature = temperature;
 		this.eot = eot;
@@ -47,8 +48,10 @@ class GreedyDecoder {
 	}
 
 	finalize(tokens, sumLogprobs) {
+		//tokens rank == 3
 		// tokens = tokens.concat(tf.fill([ tokens.shape[0], 1 ], this.eot), 1);
 		tokens = tf.pad3d(tokens, [ [ 0, 0 ], [ 0, 0 ], [ 0, 1 ] ], this.eot);
+		// tokens = tf.pad(tokens, [[0, 1]], this.eot)
 		return [ tokens, sumLogprobs.dataSync() ];
 	}
 }

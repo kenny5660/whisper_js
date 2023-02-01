@@ -26,16 +26,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        
       - name: Setup Pages
         uses: actions/configure-pages@v2
+        
       - name: Setup Node.js 16.x
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
+    
       - name: Install dependencies
         run: yarn
+        
       - name: Build with Parcel
-        run: yarn build 
+        run: yarn build
+        
+      - name: Checkout weights
+        uses: actions/checkout@v3
+        with:
+          ref: weights
+          lfs: true
+          clean: false
+      
+      - name: Copy weights
+        run: cp ./*.h5 ./dist/
+        
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:

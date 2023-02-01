@@ -38,57 +38,66 @@ limitations under the License.
       font-weight: bold;
     }
   </style>
+  <link rel="icon" type="image/png" href="img/voice-recognition-32px.png"/>
 </head>
 
 <body>
   <div class="tfjs-example-container centered-container">
     <section class='title-area'>
-      <h1>TensorFlow.js Layers: Sequence-to-Sequence (English-French Translation)</h1>
+      <img src="img/voice-recognition-128px.png" style="margin: 10px auto 20px;display: block;"><h1 style="margin: auto;">  Whisper.js - speech recognition model</h1>
     </section>
 
     <section>
       <p class='section-head'>Description</p>
 
       <p>
-        This example demonstrates a pre-trained sequence-to-sequence models can be used in the browser. It is
-        based on the <a href="https://github.com/keras-team/keras/blob/master/examples/lstm_seq2seq.py">Keras
-          LSTM-seq2seq example</a> and uses a charachter based model to translate the text (as opposed to a word based
-        model).
+        Whisper.js is port of <a href="https://github.com/openai/whisper">Whisper speech recognition model</a> to JavaScript.
       </p>
-      <p>
-        The model is <a href="https://github.com/tensorflow/tfjs-examples/tree/master/translation/python">trained in
-          Python</a> and then converted to TensorFlow.js format.
-      </p>
-      <p>This is not intended to be a production level translation model.</p>
-    </section>
-
-    <section>
-      <p class='section-head'>Status</p>
-      <span id="status">Standing by.</span>
     </section>
 
     <section>
       <p class='section-head'>Load Model</p>
 
       <div class="create-model">
-        <button id="load-pretrained-remote" style="display:none">Load hosted pretrained model</button>
-        <button id="load-pretrained-local" style="display:none">Load local pretrained model</button>
+        <select id="select-model">
+          <option value="">Select model</option>
+          <option value="tiny.en">tiny.en</option>
+          <option value="tiny" >tiny</option>
+          <option value="base.en">base.en</option>
+          <option value="base">base</option>
+        </select>
       </div>
+      <p>
+        <div id="model-progressbar-container">
+          <div id="model-status">
+            Model not selected
+          </div>
+          <div id="model-progressbar" class="mdl-progress mdl-js-progress"></div>
+        </div>
+      </p>
     </section>
 
     <section>
       <p class='section-head'>Test Model</p>
-
       <div class="input-div">
-        <span class="input-output-label">Input English phrase:</span>
-        <input id="englishSentence" size=16 maxlength="16"></input>
+        <span class="input-output-label">Recognize an audio file:</span>
+        <div class="file-upload mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
+          <span>BROWSE</span>
+            <input type="file" name="FileAttachment" id="input_audiofile" class="upload" />
+        </div>
+        <input type="text" id="fileuploadurl" readonly placeholder="Maximum file size is 1GB">
       </div>
       <div class="input-div">
-        <span class="input-output-label">Output French phrase:</span>
-        <span class="output" id="frenchSentence"></span>
+      Streaming recognition using a microphone 
+      <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent" id="input-start-stream">
+        <i class="material-icons">mic_off</i>
+      </button>
+    </div>
+      <div class="input-div">
+        <span class="input-output-label">Output:</span>
+        <textarea id="model-output"></textarea>
       </div>
     </section>
   </div>
-
   <script type="module" src="js/index.js"></script>
 </body>
