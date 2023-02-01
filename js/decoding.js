@@ -1,6 +1,6 @@
 import * as tf from '@tensorflow/tfjs';
 import { GreedyDecoder } from './greedy_decoder.js';
-import {MaximumLikelihoodRanker} from './maximum_likehood_ranker.js';
+import { MaximumLikelihoodRanker } from './maximum_likehood_ranker.js';
 import { getTokenizer } from './tokenizer/tokenizer.js';
 
 class DecodingResult {
@@ -29,16 +29,11 @@ class DecodingResult {
 	}
 }
 
-function assignColumn(tensor, cols, value) {
+function assignColumns(tensor, cols, value) {
 	let buffer = tensor.bufferSync();
-	const rank = tensor.shape.length;
 	for (let row = 0; row < buffer.shape[0]; row++) {
-		for (let col in cols) {
-			if (rank === 3) {
-				for (let z = 0; z < tensor.shape[2]; z++) {
-					buffer.set(value, row, col, z);
-				}
-			} else buffer.set(value, row, col);
+		for (let col of cols) {
+			buffer.set(value, row, col);
 		}
 	}
 	return buffer.toTensor();
@@ -49,7 +44,9 @@ class SuppressTokens {
 	}
 
 	apply(logits, tokens) {
-		return [ assignColumn(logits, this.suppressTokens, 1e18), tokens ];
+		// logits.rank == 2
+		const res = assignColumns(logits, this.suppressTokens, -1e18);
+		return [ res, tokens ];
 	}
 }
 
@@ -207,12 +204,12 @@ class DecodingTask {
 				noSpeechProb = tf.transpose(probsAtSotT.gather(this.tokenizer.noSpeech)).arraySync();
 			}
 			logits = logits.gather(logits.shape[1] - 1, 1);
-				for (let logitFilter of this.logitFilters) {
-					[ logits, tokens ] = logitFilter.apply(logits, tokens);
-				}
-				let completed;
-				[ tokens, completed ] = this.decoder.update(tokens, logits, sumLogprobs);
-				if (completed || tokens.shape[tokens.shape.length - 1] > n_cts) break;
+			for (let logitFilter of this.logitFilters) {
+				[ logits, tokens ] = logitFilter.apply(logits, tokens);
+			}
+			let completed;
+			[ tokens, completed ] = this.decoder.update(tokens, logits, sumLogprobs);
+			if (completed || tokens.shape[tokens.shape.length - 1] > n_cts) break;
 		}
 		return [ tokens, sumLogprobs, noSpeechProb ];
 	}
