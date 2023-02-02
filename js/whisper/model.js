@@ -2,7 +2,7 @@ import * as tf from '@tensorflow/tfjs';
 import { DecodingTask } from '../decoding.js';
 
 class MultiHeadAttention extends tf.layers.Layer {
-	constructor(nState, nHead, weights, prefix) {
+	constructor(nState, nHead, weights, dec_enc, num_layer, prefix) {
 		super({});
 		// this.nState = nState;
 		this.nHead = nHead;
@@ -10,23 +10,23 @@ class MultiHeadAttention extends tf.layers.Layer {
 		this.query = tf.layers.dense({
 			inputShape: nState,
 			units: nState,
-			weights: [ weights[prefix + '.query.weight'], weights[prefix + '.query.bias'] ]
+			weights: [ weights.get(dec_enc + num_layer + prefix + '.query.weight'), weights.get(dec_enc + num_layer + prefix + '.query.bias') ]
 		});
 		this.key = tf.layers.dense({
 			inputShape: nState,
 			units: nState,
 			useBias: false,
-			weights: [ weights[prefix + '.key.weight'] ]
+			weights: [ weights.get(dec_enc + num_layer + prefix + '.key.weight') ]
 		});
 		this.value = tf.layers.dense({
 			inputShape: nState,
 			units: nState,
-			weights: [ weights[prefix + '.value.weight'], weights[prefix + '.value.bias'] ]
+			weights: [ weights.get(dec_enc + num_layer + prefix + '.value.weight'), weights.get(dec_enc + num_layer + prefix + '.value.bias') ]
 		});
 		this.out = tf.layers.dense({
 			inputShape: nState,
 			units: nState,
-			weights: [ weights[prefix + '.out.weight'], weights[prefix + '.out.bias'] ]
+			weights: [ weights.get(dec_enc + num_layer + prefix + '.out.weight'), weights.get(dec_enc + num_layer + prefix + '.out.bias') ]
 		});
 	}
 
@@ -86,22 +86,22 @@ class GeLU extends tf.layers.Layer {
 }
 
 class ResidualAttentionBlock extends tf.layers.Layer {
-	constructor(nState, nHead, weights, crossAttention = false) {
+	constructor(nState, nHead, weights, num_layer, dec_enc, crossAttention = false) {
 		super();
-		this.attn = new MultiHeadAttention(nState, nHead, weights, 'attn');
+		this.attn = new MultiHeadAttention(nState, nHead, weights, dec_enc, num_layer, '.attn');
 		this.attn_ln = tf.layers.layerNormalization({
 			inputShape: nState,
 			epsilon: 1e-5,
-			weights: [ weights['attn_ln.weight'], weights['attn_ln.bias'] ],
+			weights: [ weights.get(dec_enc + num_layer + '.attn_ln.weight'), weights.get(dec_enc + num_layer + '.attn_ln.bias') ],
 			trainable: false
 		});
 
-		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead, weights, 'cross_attn') : null;
+		this.cross_attn = crossAttention ? new MultiHeadAttention(nState, nHead, weights, dec_enc, num_layer, '.cross_attn') : null;
 		this.cross_attn_ln = crossAttention
 			? tf.layers.layerNormalization({
 					inputShape: nState,
 					epsilon: 1e-5,
-					weights: [ weights['cross_attn_ln.weight'], weights['cross_attn_ln.bias'] ],
+					weights: [ weights.get(dec_enc + num_layer + '.cross_attn_ln.weight'), weights.get(dec_enc + num_layer + '.cross_attn_ln.bias') ],
 					trainable: false
 				})
 			: null;
@@ -110,18 +110,18 @@ class ResidualAttentionBlock extends tf.layers.Layer {
 		this.mlp1 = tf.layers.dense({
 			inputShape: nState,
 			units: nMlp,
-			weights: [ weights['mlp.0.weight'], weights['mlp.0.bias'] ]
+			weights: [ weights.get(dec_enc + num_layer + '.mlp.0.weight'), weights.get(dec_enc + num_layer + '.mlp.0.bias') ]
 		});
 		this.mlp2 = new GeLU();
 		this.mlp3 = tf.layers.dense({
 			inputShape: nMlp,
 			units: nState,
-			weights: [ weights['mlp.2.weight'], weights['mlp.2.bias'] ]
+			weights: [ weights.get(dec_enc + num_layer + '.mlp.2.weight'), weights.get(dec_enc + num_layer + '.mlp.2.bias') ]
 		});
 		this.mlpLn = tf.layers.layerNormalization({
 			inputShape: nState,
 			epsilon: 1e-5,
-			weights: [ weights['mlp_ln.weight'], weights['mlp_ln.bias'] ],
+			weights: [ weights.get(dec_enc + num_layer + '.mlp_ln.weight'), weights.get(dec_enc + num_layer + '.mlp_ln.bias') ],
 			trainable: false
 		});
 	}
@@ -166,7 +166,7 @@ class AudioEncoder extends tf.layers.Layer {
 			kernelSize: 3,
 			// padding: 'same',
 			padding: 'valid',
-			weights: [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ],
+			weights: [ weights.get('encoder.conv1.weight'), weights.get('encoder.conv1.bias') ],
 			dataFormat: 'channelsFirst'
 		});
 
@@ -175,21 +175,21 @@ class AudioEncoder extends tf.layers.Layer {
 			kernelSize: 3,
 			strides: 2,
 			padding: 'valid',
-			weights: [ weights['encoder.conv2.weight'], weights['encoder.conv2.bias'] ],
+			weights: [ weights.get('encoder.conv2.weight'), weights.get('encoder.conv2.bias') ],
 			dataFormat: 'channelsFirst'
 		});
-		this.conv1_weights = [ weights['encoder.conv1.weight'], weights['encoder.conv1.bias'] ];
-		this.conv2_weights = [ weights['encoder.conv2.weight'], weights['encoder.conv2.bias'] ];
+		this.conv1_weights = [ weights.get('encoder.conv1.weight'), weights.get('encoder.conv1.bias') ];
+		this.conv2_weights = [ weights.get('encoder.conv2.weight'), weights.get('encoder.conv2.bias') ];
 		this.positionalEmbedding = sinusoids(n_ctx, nState);
 		// this.positionalEmbedding = weights['encoder.positional_embedding'];
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights['encoder.blocks.'][i]));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights, i, 'encoder.blocks.'));
 		}
 		this.ln_post = tf.layers.layerNormalization({
 			inputShape: nState,
 			epsilon: 1e-5,
-			weights: [ weights['encoder.ln_post.weight'], weights['encoder.ln_post.bias'] ],
+			weights: [ weights.get('encoder.ln_post.weight'), weights.get('encoder.ln_post.bias') ],
 			trainable: false
 		});
 	}
@@ -231,18 +231,18 @@ class TextDecoder extends tf.layers.Layer {
 			inputDim: nVocab,
 			outputDim: nState,
 			trainable: false,
-			weights: [weights['decoder.token_embedding.weight']]
+			weights: [ weights.get('decoder.token_embedding.weight') ]
 		});
 		// this.positionalEmbedding = tf.zeros([ n_ctx, nState ]);
-		this.positionalEmbedding = weights['decoder.positional_embedding'];
+		this.positionalEmbedding = weights.get('decoder.positional_embedding');
 		this.blocks = [];
 		for (let i = 0; i < n_layer; i++) {
-			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights['decoder.blocks.'][i], true));
+			this.blocks.push(new ResidualAttentionBlock(nState, nHead, weights, i, 'decoder.blocks.', true));
 		}
 		this.ln = tf.layers.layerNormalization({
 			inputShape: nState,
 			epsilon: 1e-5,
-			weights: [ weights['decoder.ln.weight'], weights['decoder.ln.bias'] ],
+			weights: [ weights.get('decoder.ln.weight'), weights.get('decoder.ln.bias') ],
 			trainable: false
 		});
 
@@ -290,66 +290,23 @@ export class Whisper extends tf.layers.Layer {
 	constructor(weights) {
 		super();
 
-		this.dims = weights.get('dims');
-		this.model_state_dict = weights.get('model_state_dict');
-
-		let encoderWeights = { 'encoder.blocks.': {} };
-		let decoderWeights = { 'decoder.blocks.': {} };
-
-		let self = this;
-
-		function collectBlockWeights(fullName, prefix, weights) {
-			const num = Number(fullName[prefix.length]);
-			const attn_layer_name = fullName.substring(prefix.length + 2);
-
-			if (!isNaN(Number(fullName[prefix.length + 1]))) {
-				num = Number(fullName[prefix.length] + fullName[prefix.length + 1]);
-				attn_layer_name = fullName.substring(prefix.length + 3);
-			}
-
-			if (typeof weights[prefix][num] === 'undefined') {
-				weights[prefix][num] = {};
-			}
-			
-			let dataset = self.model_state_dict.get(fullName);
-			weights[prefix][num][attn_layer_name] = tf.tensor(dataset.value, dataset.shape);
-		}
-
-		for (let name of this.model_state_dict.keys()) {
-			if (name.includes('encoder')) {
-				if (!name.includes('blocks')) {
-					let dataset = this.model_state_dict.get(name);
-					encoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
-				} else {
-					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
-				}
-			}
-
-			if (name.includes('decoder')) {
-				if (!name.includes('blocks')) {
-					let dataset = this.model_state_dict.get(name);
-					decoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
-				} else {
-					collectBlockWeights(name, 'decoder.blocks.', decoderWeights);
-				}
-			}
-		}
+		this.dims = weights.weights.get('dims');
 
 		this.encoder = new AudioEncoder(
-			this.dims.get('n_mels').value,
-			this.dims.get('n_audio_ctx').value,
-			this.dims.get('n_audio_state').value,
-			this.dims.get('n_audio_head').value,
-			this.dims.get('n_audio_layer').value,
-			encoderWeights
+			weights.get_dim('n_mels'),
+			weights.get_dim('n_audio_ctx'),
+			weights.get_dim('n_audio_state'),
+			weights.get_dim('n_audio_head'),
+			weights.get_dim('n_audio_layer'),
+			weights
 		);
 		this.decoder = new TextDecoder(
-			this.dims.get('n_vocab').value,
-			this.dims.get('n_text_ctx').value,
-			this.dims.get('n_text_state').value,
-			this.dims.get('n_text_head').value,
-			this.dims.get('n_text_layer').value,
-			decoderWeights
+			weights.get_dim('n_vocab'),
+			weights.get_dim('n_text_ctx'),
+			weights.get_dim('n_text_state'),
+			weights.get_dim('n_text_head'),
+			weights.get_dim('n_text_layer'),
+			weights
 		);
 	}
 

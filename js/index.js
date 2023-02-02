@@ -118,8 +118,8 @@ class App {
         this.weightsDownloader.downloadModel(this.current_model_name).then((weights) => this.weightsReady(self, weights));
     }
     weightsReady(self, weights) {
-        self.weights = weights
-        self.whisper = new Whisper(self.weights.weights);
+        self.weights = weights;
+        self.whisper = new Whisper(self.weights);
         console.log("weightsReady ", this.current_model_name);
         console.log(self.weights)
         self.modelReady = true;
