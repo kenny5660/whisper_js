@@ -12,3 +12,4 @@ yalc.lock
 *firebase-debug.log
 **/.parcel-cache
 yarn.lock
+extension_build*
