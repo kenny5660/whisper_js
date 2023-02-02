@@ -8,24 +8,13 @@ class DecodingResult {
 		{
 			audioFeatures,
 			language,
-			languageProbs = {},
-			tokens = new Array(),
 			text = '',
-			avgLogprob = null,
-			noSpeechProb = null,
-			temperature = null,
-			compressionRatio = null
 		} = {}
 	) {
 		this.audioFeatures = audioFeatures;
 		this.language = language;
-		this.languageProbs = languageProbs;
 		this.tokens = tokens;
 		this.text = text;
-		this.avgLogprob = avgLogprob;
-		this.noSpeechProb = noSpeechProb;
-		this.temperature = temperature;
-		this.compressionRatio = compressionRatio;
 	}
 }
 
@@ -224,9 +213,6 @@ class DecodingTask {
 		let tokens = tf.tensor2d(Array(nAudio).fill(this.initialTokens));
 
 		let [ languages, languageProbs ] = this.detectLanguage(audioFeatures, tokens);
-		if (this.options.task === 'lang_id') {
-			//TODO
-		}
 		// TODO check shapes
 		audioFeatures = tf.tensor(Array(this.nGroup).fill(audioFeatures.arraySync()[0]));
 		tokens = tf.tensor(Array(this.nGroup).fill(tokens.arraySync()[0]));
@@ -235,10 +221,6 @@ class DecodingTask {
 		console.log(sumLogprobs);
 
 		audioFeatures = audioFeatures.gather(tf.range(0, audioFeatures.shape[0], this.nGroup, 'int32'));
-		// noSpeechProbs = tf.tensor(noSpeechProbs);
-		// noSpeechProbs = noSpeechProbs.gather(tf.range(0, noSpeechProbs.shape[0], this.nGroup, 'int32'));
-		// noSpeechProbs = noSpeechProbs.arraySync();
-
 		tokens = tokens.reshape([ nAudio, this.nGroup, -1 ]);
 		sumLogprobs = sumLogprobs.reshape([ nAudio, this.nGroup ]);
 
