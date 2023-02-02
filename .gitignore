@@ -13,3 +13,4 @@ yalc.lock
 **/.parcel-cache
 yarn.lock
 extension_build*
+*.vscode
