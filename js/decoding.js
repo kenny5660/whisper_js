@@ -77,9 +77,9 @@ class DecodingTask {
 
 		if (options.beamSize) {
 			const inference = new TensorFlowJSInference(this.model, this.initialTokens.length)
-			this.decoder = new BeamSearchDecoder(options.beamSize, tokenizer.eot, inference);
+			this.decoder = new BeamSearchDecoder(options.beamSize, tokenizer.eot, inference, options.patience);
 		} else {
-			this.decoder = new GreedyDecoder(options.temperature, tokenizer.eot, options.patience);
+			this.decoder = new GreedyDecoder(options.temperature, tokenizer.eot);
 		}
 		this.logitFilters = [];
 		if (this.options.suppressBlank) {
