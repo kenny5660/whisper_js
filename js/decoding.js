@@ -215,7 +215,7 @@ export class DecodingTask {
 			let t = newTokens[i];
 			let words = tokenizer.decode(t);
 
-			texts.push(words.map(x => x.trim().join(' ')));
+			texts.push(words.map(x => x.trim()).join(' '));
 		}
 
 		let results = new Array();
