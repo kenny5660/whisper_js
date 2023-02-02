@@ -25,6 +25,7 @@ export class WeightsDownloader{
         let self = this;
         this.gui_model_progressbar.addEventListener('mdl-componentupgraded', function () {
             console.log("mdl-componentupgraded");
+            console.log(this.MaterialProgress);
             this.MaterialProgress.setProgress(0);
             self.mdlProgressInitDone = true;
           });
@@ -83,9 +84,6 @@ export class WeightsDownloader{
         
     }
     _weightsDone(self) {
-        const status_text = `Model "${self.current_model_name}" ready!`;
-        console.log(status_text);
-        self.gui_model_status.innerHTML = status_text;
         self.modelReady = true;
     }
     _weightsError(self) {

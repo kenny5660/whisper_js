@@ -22,7 +22,7 @@ limitations under the License.
 
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="style.scss" />
+  <link rel="stylesheet" href="../style.scss" />
 
   <style>
     .input-div {
@@ -38,57 +38,21 @@ limitations under the License.
       font-weight: bold;
     }
   </style>
-  <link rel="icon" type="image/png" href="img/voice-recognition-32px.png"/>
 </head>
 
 <body>
   <div class="tfjs-example-container centered-container">
-    <section class='title-area'>
-      <img src="img/voice-recognition-128px.png" style="margin: 10px auto 20px;display: block;"><h1 style="margin: auto;">  Whisper.js - speech recognition model</h1>
-    </section>
-
     <section>
-      <p class='section-head'>Description</p>
-
-      <p>
-        Whisper.js is port of <a href="https://github.com/openai/whisper">Whisper speech recognition model</a> to JavaScript.
-      </p>
-    </section>
-
-    <section>
-      <p class='section-head'>Load Model</p>
-
-      <div class="create-model">
-        <select id="select-model">
-          <option value="">Select model</option>
-          <option value="tiny.en">tiny.en</option>
-          <option value="tiny" >tiny</option>
-          <option value="base.en">base.en</option>
-          <option value="base">base</option>
-        </select>
-      </div>
-      <p>
-        <div id="model-progressbar-container">
-          <div id="model-status">
-            Model not selected
-          </div>
-          <div id="model-progressbar" class="mdl-progress mdl-js-progress"></div>
-        </div>
-      </p>
-    </section>
-
-    <section>
-      <p class='section-head'>Test Model</p>
       <div class="input-div">
-        <span class="input-output-label">Recognize an audio file:</span>
+        <span class="input-output-label">Audio file:</span>
         <div class="file-upload mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent">
           <span>BROWSE</span>
             <input type="file" name="FileAttachment" id="input_audiofile" class="upload" />
         </div>
-        <input type="text" id="fileuploadurl" readonly placeholder="Maximum file size is 1GB">
+        <input type="text" id="fileuploadurl" readonly placeholder="">
       </div>
       <div class="input-div">
-      Streaming recognition using a microphone 
+      Streaming recognition
       <button class="mdl-button mdl-js-button mdl-button--raised mdl-button--accent" id="input-start-stream">
         <i class="material-icons">mic_off</i>
       </button>
@@ -99,5 +63,5 @@ limitations under the License.
       </div>
     </section>
   </div>
-  <script type="module" src="js/index.js"></script>
+  <script type="module" src="../js/index.js"></script>
 </body>

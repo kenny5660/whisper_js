@@ -24,5 +24,10 @@ export class Weights {
         let data_key = this.weights.get('model_state_dict').get(key);
         return tf.tensor(data_key.value, data_key.shape);
     }
+
+    get_dim(key) {
+        let data_key = this.weights.get('dims').get(key);
+        return data_key.value;
+    }
 }
 
