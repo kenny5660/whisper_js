@@ -4,12 +4,7 @@ import { MaximumLikelihoodRanker } from './maximum_likehood_ranker.js';
 import { getTokenizer } from './tokenizer/tokenizer.js';
 
 export class DecodingResult {
-	constructor(
-		{
-			language,
-			text = '',
-		} = {}
-	) {
+	constructor({ language, text = '' } = {}) {
 		this.language = language;
 		this.text = text;
 	}
@@ -64,7 +59,7 @@ export class DecodingTask {
 			this.decoder = new GreedyDecoder(options.temperature, tokenizer.eot);
 		}
 		this.logitFilters = [];
-		
+
 		if (this.options.suppressTokens) {
 			this.logitFilters.push(new SuppressTokens(this.getSuppressTokens()));
 		}
@@ -211,11 +206,19 @@ export class DecodingTask {
 		}
 
 		let texts = new Array();
+		const nonAlpha = '!.,?';
 		for (let i = 0; i < newTokens.length; i++) {
 			let t = newTokens[i];
 			let words = tokenizer.decode(t);
-
-			texts.push(words.map(x => x.trim()).join(' '));
+			let string = '';
+			words.forEach((word) => {
+				if (nonAlpha.includes(word[0])) {
+					string += word.trim();
+				} else {
+					string = string + ' ' + word.trim();
+				}
+			});
+			texts.push(string.trim());
 		}
 
 		let results = new Array();
@@ -226,7 +229,7 @@ export class DecodingTask {
 			results.push(
 				new DecodingResult({
 					language: lang,
-					text: text,
+					text: text
 				})
 			);
 		}
