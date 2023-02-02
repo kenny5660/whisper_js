@@ -277,7 +277,8 @@ class DecodingTask {
 		let results = new Array();
 		for (let i = 0; i < audioFeatures.shape[0]; i++) {
 			const text = texts[i];
-			const lang = languages[i];
+			//const lang = languages[i];
+			const lang = 'en';
 			// const tokens = newTokens[i];
 			// const af = audioFeatures.gather(i);
 			// const lp = newAvgLogprobs[i];

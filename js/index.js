@@ -47,6 +47,7 @@ class App {
 
         this.modelReady = false;
         this.current_model_name = ""
+        this.gui_model_output = document.getElementById("model-output");
         this.gui_select_model = document.getElementById("select-model");
         this.gui_model_progressbar = document.getElementById("model-progressbar");
 
@@ -58,6 +59,7 @@ class App {
 
         this.record_audio = document.getElementById("input-start-stream");
         this.record_audio.onclick = (event) => this.onclickRecordAudioFile();
+        
 
         this.mdlProgressInitDone = false;
         let self = this;
@@ -74,6 +76,7 @@ class App {
         }
         else {
             const audio = await preprocessAudio(file);
+            this.run_model(audio).then( (res) =>this.print_model_result(res));
         }
     }
 
@@ -94,6 +97,7 @@ class App {
                 const audio = await preprocessAudio(file);
 
                 audio.print();
+                this.run_model(audio).then( (res) =>this.print_model_result(res))
 
             }
             this.rec.start();
@@ -121,9 +125,16 @@ class App {
         self.modelReady = true;
     }
     async run_model(mel_audio) {
-        console.log("Run whisper")
-        let result = this.whisper.decode(mel);
+        console.time("run_model");
+        console.timeLog("run_model", "Run whisper");
+        let result = this.whisper.decode(mel_audio);
+        console.timeLog("run_model", "Recognition completed");
+        console.timeEnd("run_model");
         return result;
+    }
+    async print_model_result(decoding_result) {
+        console.log(decoding_result)
+        this.gui_model_output.innerText = decoding_result.text;
     }
 
 }

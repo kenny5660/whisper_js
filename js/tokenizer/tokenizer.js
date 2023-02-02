@@ -7,6 +7,7 @@ import specialTokensMap_en from './gpt2/special_tokens_map.json';
 import vocab_ml from './multilingual/vocab.json';
 import nonSpeechTokens_ml from './multilingual/non_speech_tokens.json';
 import specialTokensMap_ml from './multilingual/special_tokens_map.json';
+import addedTokens_ml from './multilingual/added_tokens.json';
 
 const LANGUAGES = {
 	en: 'english',
@@ -130,13 +131,11 @@ const TO_LANGUAGE_CODE = {
 
 class Tokenizer {
 	constructor(name) {
-		this.path = name;
 		if (name == 'multilingual') {
 			this.vocab = vocab_ml;
 			this.nonSpeechTokens = nonSpeechTokens_ml['non_speech_tokens'];
 			this.specialTokensMap = specialTokensMap_ml;
-			const addedTokens = require(this.path + '\\added_tokens.json');
-			this.vocab = { ...this.vocab, ...addedTokens };
+			this.vocab = { ...this.vocab, ...addedTokens_ml };
 		} else {
 			this.vocab = vocab_en;
 			this.nonSpeechTokens = nonSpeechTokens_en['non_speech_tokens'];
