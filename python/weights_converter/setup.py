@@ -8,7 +8,7 @@ setup(
             'tqdm==4.64.1',
             'urllib3==1.26.13',
             'numpy==1.23.5',
-            'torch==1.13.0',
+            'torch==1.13.0+cpu',
             'h5py==3.7.0'
         ],
         entry_points={
