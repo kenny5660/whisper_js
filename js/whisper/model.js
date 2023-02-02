@@ -303,8 +303,8 @@ export class Whisper extends tf.layers.Layer {
 			const attn_layer_name = fullName.substring(prefix.length + 2);
 
 			if (!isNaN(Number(fullName[prefix.length + 1]))) {
-				num = Number(fullName[prefix.length] + fullName[prefix.length + 1]);
-				attn_layer_name = fullName.substring(prefix.length + 3);
+				let num = Number(fullName[prefix.length] + fullName[prefix.length + 1]);
+				let attn_layer_name = fullName.substring(prefix.length + 3);
 			}
 
 			if (typeof weights[prefix][num] === 'undefined') {
@@ -379,8 +379,8 @@ export class Whisper extends tf.layers.Layer {
 			'temperature': 0.0,
 			'sampleLen': null,
 			'bestOf': null,
-			'beamSize': null,
-			'patience': null,
+			'beamSize': 5,
+			'patience': 1.0,
 			'lengthPenalty': null,
 			'prompt': null,
 			'prefix': null,

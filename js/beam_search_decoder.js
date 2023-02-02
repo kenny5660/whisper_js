@@ -1,3 +1,5 @@
+import * as tf from "@tensorflow/tfjs-core";
+
 tf = require('@tensorflow/tfjs');
 
 /*
@@ -7,16 +9,27 @@ constructor:
 - inference - класс для кэширования
 - patience - коэффициент уверенности
 - maxCandidates - максимальное количество гипотез
-- finishedSequences - итоговая последовательность токенов
+- finishedSequences - вспомогательное поле для проверки окончания
  */
 
-class BeamSearchDecoder {
+function sortDictByValue(dict) {
+    const sorted = {};
+    Object.entries(dict)
+        .sort((a, b) => b[1] - a[1])
+        .forEach(([key, value]) => {
+            sorted[key] = value;
+        });
+    return sorted;
+}
+
+
+export class BeamSearchDecoder {
     constructor(beamSize, eot, inference, patience = 1.0) {
         this.beamSize = beamSize;
         this.eot = eot;
         this.inference = inference;
         this.patience = patience;
-        this.maxCandidates = Math.round(beamSize * this.patience);
+        this.maxCandidates = Math.floor(beamSize * this.patience);
         this.finishedSequences = null;
 
         if (this.maxCandidates <= 0) {
@@ -29,6 +42,7 @@ class BeamSearchDecoder {
     }
 
     update(tokens, logits, sumLogprobs) {
+        tokens.print();
         if (tokens.shape[0] % this.beamSize !== 0) {
             throw new Error(`${tokens.shape[0]} % ${this.beamSize} !== 0`);
         }
@@ -43,58 +57,74 @@ class BeamSearchDecoder {
         let nextTokens = [];
         let sourceIndices = [];
         let finishedSequences = [];
+        let completed = false;
 
         for (let i = 0; i < nAudio; i++) {
-            const scores = {};
+            let scores = {};
             const sources = {};
             const finished = {};
 
             for (let j = 0; j < this.beamSize; j++) {
                 const idx = i * this.beamSize + j;
-                const prefix = tokens.slice([idx], [1]).arraySync();
-
-                const {logProbsTmp, indicesTmp} = tf.topk(logProbs[idx], this.beamSize + 1);
+                const prefix = tokens.gather(idx);
+                const logProbsIdx = logProbs.gather(idx);
+                const {values, indices} = logProbsIdx.topk(this.beamSize + 1);
 
                 for (let k = 0; k < indices.shape[0]; k++) {
-                    let newLogprob = (sumLogprobs[idx].add(logProbsTmp[idx])).dataSync();
-                    let sequence = prefix + [indicesTmp[idx].dataSync()];
+                    let newLogprob = (sumLogprobs.gather(idx).add(values.gather(idx))).dataSync();
+                    let sequence = prefix.concat(indices.gather(idx).expandDims(0)).dataSync();
                     scores[sequence] = newLogprob;
                     sources[sequence] = idx;
                 }
             }
 
+
             let saved = 0;
-            for (const sequence of Object.keys(scores).sort((a, b) => scores[b] - scores[a])) {
-                if (sequence[sequence.length - 1] === this.eot) {
+            scores = sortDictByValue(scores)
+            for (const sequence in scores) {
+                const sequence_int = sequence.split(',').map(Number)
+                if (sequence_int[sequence_int.length - 1] === this.eot) {
                     finished[sequence] = scores[sequence];
-                }
-                else {
-                    sumLogprobs[nextTokens.shape[0]] = scores[sequence];
+                    completed = true;
+                } else {
+                    sumLogprobs = sumLogprobs.dataSync();
+                    sumLogprobs[nextTokens.length] = scores[sequence];
+                    sumLogprobs = tf.tensor(sumLogprobs);
                     nextTokens.push(sequence);
                     sourceIndices.push(sources[sequence]);
-                    saved++;
-                    if (saved === this.beamSize){
+                    saved +=1;
+                    if (saved === this.beamSize) {
                         break;
                     }
                 }
             }
-
             finishedSequences.push(finished);
         }
-
-        tokens = tf.tensor(nextTokens);
+        if (!completed) {
+            tokens = nextTokens.map(str => str.split(',').map(num => parseInt(num, 10)));
+            tokens = tf.tensor(tokens);
+        }
         this.inference.rearrangeKVCache(sourceIndices);
 
-        for (let i = 0; i < this.finishedSequences.length; i++) {
-            for (const seq of Object.keys(finishedSequences[i]).sort((a, b) => finishedSequences[i][b] - finishedSequences[i][a])) {
-                if (Object.keys(this.finishedSequences[i]).length >= this.maxCandidates) {
-                    break;
-                }
-                this.finishedSequences[i][seq] = finishedSequences[i][seq];
-            }
+        if (this.finishedSequences.length !== finishedSequences.length) {
+            throw new Error(`this.finishedSequences len != finishedSequences.length`);
         }
+        // throw new Error()
+        for (const key in this.finishedSequences) {
+            const previouslyFinished = this.finishedSequences[key];
+            let newlyFinished = finishedSequences[key];
+            newlyFinished = sortDictByValue(newlyFinished)
+            for (const seq in newlyFinished) {
+                    if (Object.keys(previouslyFinished).length >= this.maxCandidates) {
+                        return;
+                    }
+                    previouslyFinished[seq] = newlyFinished[seq];
+                }
+        }
+        // const completed = this.finishedSequences.every(sequences => Object.keys(sequences).length >= this.maxCandidates);
 
-        const completed = this.finishedSequences.every(sequences => Object.keys(sequences).length >= this.maxCandidates);
+        tokens.print();
+        sumLogprobs.print();
         return [ tokens, completed ];
     }
 
@@ -102,10 +132,10 @@ class BeamSearchDecoder {
         for (let i = 0; i < this.finishedSequences.length; i++) {
             let sequences = this.finishedSequences[i];
             if (sequences.length < this.beamSize){
-                const sortedIndices = Array.from(sumLogprobs[i].argMin().dataSync()).reverse();
+                const sortedIndices = Array.from(sumLogprobs.gather(i).argMin().dataSync()).reverse();
                 for (let j in sortedIndices){
-                    const sequence = precedingTokens[i][j].dataSync() + [this.eot];
-                    sequences[sequence] = sumLogprobs[i][j].dataSync();
+                    const sequence = precedingTokens.gather(i).gather(j).dataSync() + [this.eot];
+                    sequences[sequence] = sumLogprobs.gather(i).gather(j).dataSync();
                     if (sequences.length >= this.beamSize){
                         break;
                     }
@@ -113,18 +143,21 @@ class BeamSearchDecoder {
             }
         }
 
-        let tokens_ = []
-        let sumLogprobs_ = []
-        for (let sequences in this.finishedSequences){
-            for (let seq in Object.keys(sequences)){
-                tokens_.push(tf.tensor(seq));
+        let tokens = [];
+        let logprobs = [];
+
+        for (const dict in Object.keys(this.finishedSequences)){
+            const sequences = this.finishedSequences[dict]
+            for (let seq in sequences){
+                logprobs.push(sequences[seq]);
+                seq = tf.tensor(seq.split(',').map(num => parseInt(num, 10)));
+                tokens.push([seq]);
             }
-            let values = []
-            for (let value in Object.values(sequences)){
-                values.push(value)
-            }
-            sumLogprobs_.push(values)
+
+
         }
-        return [ tokens_, sumLogprobs_ ]
+        console.log(tokens);
+        console.log(logprobs);
+        return [tf.tensor(tokens), tf.tensor(logprobs)]
     }
 }

@@ -1,4 +1,4 @@
-class TensorFlowJSInference {
+export class TensorFlowJSInference {
     constructor(model, initialTokenLength) {
         this.model = model;
         this.initialTokenLength = initialTokenLength;

@@ -1,6 +1,8 @@
 import * as tf from '@tensorflow/tfjs';
 import { GreedyDecoder } from './greedy_decoder.js';
+import { BeamSearchDecoder } from './beam_search_decoder.js';
 import { MaximumLikelihoodRanker } from './maximum_likehood_ranker.js';
+import { TensorFlowJSInference } from './tensorflow_inference';
 import { getTokenizer } from './tokenizer/tokenizer.js';
 
 class DecodingResult {
@@ -74,9 +76,10 @@ class DecodingTask {
 		this.sequenceRanker = new MaximumLikelihoodRanker(options.lengthPenalty);
 
 		if (options.beamSize) {
-			// this.decoder = new BeamSearchDecoder();
+			const inference = new TensorFlowJSInference(this.model, this.initialTokens.length)
+			this.decoder = new BeamSearchDecoder(options.beamSize, tokenizer.eot, inference);
 		} else {
-			this.decoder = new GreedyDecoder(options.temperature, tokenizer.eot);
+			this.decoder = new GreedyDecoder(options.temperature, tokenizer.eot, options.patience);
 		}
 		this.logitFilters = [];
 		if (this.options.suppressBlank) {
