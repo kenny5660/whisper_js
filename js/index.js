@@ -72,7 +72,7 @@ class App {
         let file = this.input_audiofile.files[0]
         console.log(file);
         if (file.name.split('.').pop() == "json") {
-            file.text().then(JSON.parse).then(res => tf.tensor(res.mel)).then((res) => this.run_model(res)).then(res => console.log(res));
+            file.text().then(JSON.parse).then(res => tf.tensor(res.mel)).then((res) => this.run_model(res)).then( (res) =>this.print_model_result(res));
         }
         else {
             const audio = await preprocessAudio(file);
@@ -120,8 +120,7 @@ class App {
     weightsReady(self, weights) {
         self.weights = weights;
         self.whisper = new Whisper(self.weights);
-        console.log("weightsReady ", this.current_model_name);
-        console.log(self.weights)
+        
         self.modelReady = true;
     }
     async run_model(mel_audio) {
