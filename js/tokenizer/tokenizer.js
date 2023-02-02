@@ -171,7 +171,12 @@ class Tokenizer {
 		let tokens = [];
 		for (let id of token_ids) {
 			let token = this.idToToken[id];
-			if (!token) token = this.specialTokensMap['unk_token'];
+			if (!token) {
+				token = this.specialTokensMap['unk_token'];
+			}
+			if (token[0] === 'Ġ' && token.length > 1) {
+				token = token.slice(1);
+			}
 			tokens.push(token);
 		}
 		return tokens;
@@ -213,7 +218,6 @@ function buildTokenizer(name) {
 
 	tokenizer.addSpecialTokens(specials);
 	return tokenizer;
-	// tokenizer
 }
 
 export function getTokenizer(multilingual, task, language) {

@@ -334,17 +334,15 @@ export class Whisper extends tf.layers.Layer {
 			'task': 'transcribe',
 			'language': 'en',
 			'temperature': 0.0,
+			'suppressTokens': '-1',
+			'withoutTimestamps': true,
+			'maxInitialTimestamp': 1.0,
 			'sampleLen': null,
-			'bestOf': null,
 			'beamSize': null,
 			'patience': null,
 			'lengthPenalty': null,
 			'prompt': null,
 			'prefix': null,
-			'suppressBlank': true,
-			'suppressTokens': '-1',
-			'withoutTimestamps': true,
-			'maxInitialTimestamp': 1.0,
 		}
 		const single = mel.shape.length === 2;
 		if (single) mel = mel.expandDims(0);
@@ -361,7 +359,7 @@ export class Whisper extends tf.layers.Layer {
 		let hooks = [];
 
 		function saveToCache(layer, outputs) {
-			let module = layer.name;  // нужно название layer, если оно есть по дефолту - класс, иначе костылить
+			let module = layer.className;
 			let output = outputs;  // посчитанный key/value, лишняя строчка, для коммита
 
 			if (!cache[module] || output.shape[1] > self.decoder.positionalEmbedding.shape[0]) {
