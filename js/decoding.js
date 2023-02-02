@@ -131,7 +131,7 @@ export class DecodingTask {
 		let languages = Array(audioFeatures.shape[0]).fill(this.options.language);
 		let langTokens = [];
 		let langProbs = [];
-		if (!this.options.language || this.options.task === 'lang_id') {
+		if (!this.options.language) {
 			throw new Error('specify language');
 		}
 		return languages, langProbs;
@@ -215,7 +215,7 @@ export class DecodingTask {
 			let t = newTokens[i];
 			let words = tokenizer.decode(t);
 
-			texts.push(words.map(x => x.trim()));
+			texts.push(words.map(x => x.trim().join(' ')));
 		}
 
 		let results = new Array();
