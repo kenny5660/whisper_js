@@ -4,8 +4,8 @@ import numpy as np
 import argparse
 import warnings
 import torch
-import os
 import h5py
+from pathlib import Path, PurePath
 
 
 def main():
@@ -40,19 +40,19 @@ def main():
         weights = torch.load(local_path)
 
         if output_dir: 
-            output_dir = os.path.join(output_dir, f"{os.path.split(local_path)[1][:-3]}.h5")
+            output_dir = Path(output_dir, f"{PurePath(local_path).parts[-1][:-3]}.h5")
         else:
-            output_dir = f".\{os.path.split(local_path)[1][:-3]}.h5"
+            output_dir = Path(f"{PurePath(local_path).parts[-1][:-3]}.h5")
 
-        if os.path.exists(output_dir):
+        if output_dir.exists():
             warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
     else:
         if output_dir:
-            output_dir_pt = os.path.join(output_dir, f"{model_name}.pt")
+            output_dir_pt = Path(output_dir, f"{model_name}.pt")
         else:
-            output_dir_pt = f".\{model_name}.pt"
+            output_dir_pt = Path(f"{model_name}.pt")
 
-        if os.path.exists(output_dir_pt):
+        if output_dir_pt.exists():
             warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
 
         with urllib.request.urlopen(_MODELS[model_name]) as source, open(output_dir_pt, "wb") as output:
@@ -66,9 +66,9 @@ def main():
                     loop.update(len(buffer))
 
         if output_dir:
-            output_dir = os.path.join(output_dir, f"{model_name}.h5")
+            output_dir = Path(output_dir, f"{model_name}.h5")
         else:
-            output_dir = f".\{model_name}.h5"
+            output_dir = Path(f"{model_name}.h5")
 
         weights = torch.load(output_dir_pt)
 
