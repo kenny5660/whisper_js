@@ -92,7 +92,7 @@ def main():
         group_2 = f.create_group('model_state_dict')
 
         for key in weights['dims'].keys():
-            group_1.create_dataset(f'{key}', data=weights['dims'][key])
+            group_1.create_dataset(f'{key}', data=weights['dims'][key], dtype=np.int32)
 
         if compression != "None":
             for key in weights['model_state_dict'].keys():
