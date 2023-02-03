@@ -8,9 +8,12 @@ setup(
             'tqdm==4.64.1',
             'urllib3==1.26.13',
             'numpy==1.23.5',
-            'torch==1.13.0',
+            'torch==1.13.0+cpu',
             'h5py==3.7.0'
         ],
+        dependency_links=[
+        "https://download.pytorch.org/whl/torch_stable.html"
+    ],
         entry_points={
     'console_scripts':
         ['weights_converter = weights_converter.__main__:main']

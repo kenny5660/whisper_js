@@ -49,14 +49,21 @@ jobs:
       - name: Install weights_converter
         run: |
           python -m pip install --upgrade pip
-          python -m ./python/weights_converter/setup.py install
+          cd python/weights_converter
+          python setup.py install
+          cd ../..
 
       - name: Download and convert weights
         run: |
-          weights_converter --model tiny.en --output_dir ./dist
-          weights_converter --model tiny --output_dir ./dist
-          weights_converter --model base.en --output_dir ./dist
-          weights_converter --model base --output_dir ./dist
+          weights_converter --model tiny.en --output_dir ./
+          weights_converter --model tiny --output_dir ./
+          weights_converter --model base.en --output_dir ./
+          weights_converter --model base --output_dir ./
+          
+      - name: Copy weights
+        run: |
+          ls
+          cp ./*.h5 ./dist/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
