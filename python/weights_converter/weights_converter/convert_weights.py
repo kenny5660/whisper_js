@@ -42,7 +42,7 @@ def main():
         if output_dir: 
             output_dir = os.path.join(output_dir, f"{os.path.split(local_path)[1][:-3]}.h5")
         else:
-            output_dir = f".\{os.path.split(local_path)[1][:-3]}.h5"
+            output_dir = f"./{os.path.split(local_path)[1][:-3]}.h5"
 
         if os.path.exists(output_dir):
             warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
@@ -50,7 +50,7 @@ def main():
         if output_dir:
             output_dir_pt = os.path.join(output_dir, f"{model_name}.pt")
         else:
-            output_dir_pt = f".\{model_name}.pt"
+            output_dir_pt = f"./{model_name}.pt"
 
         if os.path.exists(output_dir_pt):
             warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
@@ -68,7 +68,7 @@ def main():
         if output_dir:
             output_dir = os.path.join(output_dir, f"{model_name}.h5")
         else:
-            output_dir = f".\{model_name}.h5"
+            output_dir = f"./{model_name}.h5"
 
         weights = torch.load(output_dir_pt)
 
