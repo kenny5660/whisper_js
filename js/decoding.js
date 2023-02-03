@@ -235,7 +235,6 @@ class DecodingTask {
 		tokens = tf.tensor(Array(this.nGroup).fill(tokens.arraySync()[0]));
 		let sumLogprobs, noSpeechProbs;
 		[ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
-		console.log(sumLogprobs);
 
 		audioFeatures = audioFeatures.gather(tf.range(0, audioFeatures.shape[0], this.nGroup, 'int32'));
 		// noSpeechProbs = tf.tensor(noSpeechProbs);
@@ -246,6 +245,9 @@ class DecodingTask {
 		sumLogprobs = sumLogprobs.reshape([ nAudio, this.nGroup ]);
 
 		[ tokens, sumLogprobs ] = this.decoder.finalize(tokens, sumLogprobs);
+		tokens.print();
+		// sumLogprobs.print();
+
 		let lists = new Array();
 		for (let i = 0; i < tokens.shape[0]; i++) {
 			let s = tokens.gather(i);

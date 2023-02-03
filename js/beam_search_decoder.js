@@ -142,22 +142,24 @@ export class BeamSearchDecoder {
                 }
             }
         }
-
         let tokens = [];
         let logprobs = [];
 
         for (const dict in Object.keys(this.finishedSequences)){
             const sequences = this.finishedSequences[dict]
-            for (let seq in sequences){
-                logprobs.push(sequences[seq]);
-                seq = tf.tensor(seq.split(',').map(num => parseInt(num, 10)));
-                tokens.push([seq]);
-            }
+            let empty = [];
 
+            for (let seq in sequences){
+                logprobs.push(Array.from(sequences[seq])[0]);
+                seq = seq.split(',').map(num => parseInt(num, 10));
+                empty.push(seq);
+            }
+            tokens.push(empty);
 
         }
         console.log(tokens);
         console.log(logprobs);
-        return [tf.tensor(tokens), tf.tensor(logprobs)]
+        return [tf.tensor(tokens), logprobs]
+        // return [tf.tensor(tokens), tf.tensor(logprobs)]
     }
 }
