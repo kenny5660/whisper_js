@@ -289,51 +289,7 @@ class TextDecoder extends tf.layers.Layer {
 export class Whisper extends tf.layers.Layer {
 	constructor(weights) {
 		super();
-
-		this.dims = weights.get('dims');
-		this.model_state_dict = weights.get('model_state_dict');
-
-		let encoderWeights = { 'encoder.blocks.': {} };
-		let decoderWeights = { 'decoder.blocks.': {} };
-
-		let self = this;
-
-		function collectBlockWeights(fullName, prefix, weights) {
-			const num = Number(fullName[prefix.length]);
-			const attn_layer_name = fullName.substring(prefix.length + 2);
-
-			if (!isNaN(Number(fullName[prefix.length + 1]))) {
-				let num = Number(fullName[prefix.length] + fullName[prefix.length + 1]);
-				let attn_layer_name = fullName.substring(prefix.length + 3);
-			}
-
-			if (typeof weights[prefix][num] === 'undefined') {
-				weights[prefix][num] = {};
-			}
-			
-			let dataset = self.model_state_dict.get(fullName);
-			weights[prefix][num][attn_layer_name] = tf.tensor(dataset.value, dataset.shape);
-		}
-
-		for (let name of this.model_state_dict.keys()) {
-			if (name.includes('encoder')) {
-				if (!name.includes('blocks')) {
-					let dataset = this.model_state_dict.get(name);
-					encoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
-				} else {
-					collectBlockWeights(name, 'encoder.blocks.', encoderWeights);
-				}
-			}
-
-			if (name.includes('decoder')) {
-				if (!name.includes('blocks')) {
-					let dataset = this.model_state_dict.get(name);
-					decoderWeights[name] = tf.tensor(dataset.value, dataset.shape);
-				} else {
-					collectBlockWeights(name, 'decoder.blocks.', decoderWeights);
-				}
-			}
-		}
+		this.dims = weights.weights.get('dims');
 
 		this.encoder = new AudioEncoder(
 			weights.get_dim('n_mels'),
@@ -372,25 +328,39 @@ export class Whisper extends tf.layers.Layer {
 	}
 
 	
-	decode(mel, options) {
-		options = {
-			'task': 'transcribe',
-			'language': 'en',
-			'temperature': 0.0,
-			'suppressTokens': '-1',
-			'withoutTimestamps': true,
-			'maxInitialTimestamp': 1.0,
-			'sampleLen': null,
-
-			'bestOf': null,
-			'beamSize': 5,
-			'patience': 1.0,
-			'lengthPenalty': null,
-			'prompt': null,
-			'prefix': null,
+	decode(mel, {
+		task = 'transcribe',
+		language =  'en',
+		temperature =  0.0,
+		suppressTokens =  '-1',
+		withoutTimestamps =  true,
+		maxInitialTimestamp =  1.0,
+		sampleLen =  null,
+		bestOf =  null,
+		beamSize =  5,
+		patience =  1.0,
+		lengthPenalty =  null,
+		prompt =  null,
+		prefix =  null,
+	} = {}) {
+		const options = {
+		task,
+		language ,
+		temperature ,
+		suppressTokens ,
+		withoutTimestamps ,
+		maxInitialTimestamp,
+		sampleLen ,
+		bestOf ,
+		beamSize ,
+		patience ,
+		lengthPenalty ,
+		prompt ,
+		prefix ,
 		}
 		const single = mel.shape.length === 2;
 		if (single) mel = mel.expandDims(0);
+		console.log(options)
 		let result = new DecodingTask(this, options).run(mel);
 		if (single) result = result[0];
 		return result;

@@ -48,6 +48,8 @@ class App {
         this.modelReady = false;
         this.current_model_name = ""
         this.gui_model_output = document.getElementById("model-output");
+        this.gui_beam_num = document.getElementById("num-bean");
+        this.gui_select_language = document.getElementById("select-language");
         this.gui_select_model = document.getElementById("select-model");
         this.gui_model_progressbar = document.getElementById("model-progressbar");
 
@@ -142,7 +144,8 @@ class App {
             this.gui_model_progressbar.MaterialProgress.setProgress(0)
             this.gui_model_progressbar.MaterialProgress.setBuffer(90)
             await new Promise(resolve => setTimeout(resolve, 200));
-            result = await tf.tidy(() => this.whisper.decode(mel_audio));
+            
+            result = await tf.tidy(() => this.whisper.decode(mel_audio, {'beamSize': Number(this.gui_beam_num.value),'language':this.gui_select_language.value}));
             status_text = `Recognition completed`;
             console.log(status_text);
             this.gui_model_status.innerHTML = status_text;
