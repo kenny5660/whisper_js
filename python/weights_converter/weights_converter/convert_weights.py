@@ -27,30 +27,26 @@ def main():
     parser.add_argument("--model", default="tiny", choices=_MODELS, help="the name of the scale sizse for the Whisper model to convert")
     parser.add_argument("--compression", "-c", choices=_COMPRESSIONS, default="gzip", help="use compression filter or not")
     parser.add_argument("--local_path", "-l", help="get weights from local directory")
-    parser.add_argument("--output_dir", help="directory to save the converted weights")
+    parser.add_argument("--output_dir", default=None, help="directory to save the converted weights")
 
 
     args = parser.parse_args().__dict__
     model_name  = args.pop("model")
     local_path  = args.pop("local_path")
     compression = args.pop("compression")
-    output_dir  = args["output_dir"]
+    compression = compression != 'None' and compression or None
+    output_dir  = args["output_dir"] or './'
+    output_dir_pt = args["output_dir"] or './'
 
     if local_path:
         weights = torch.load(local_path)
 
-        if output_dir: 
-            output_dir = Path(output_dir, f"{PurePath(local_path).parts[-1][:-3]}.h5")
-        else:
-            output_dir = Path(f"{PurePath(local_path).parts[-1][:-3]}.h5")
+        output_dir = Path(output_dir, f"{PurePath(local_path).parts[-1][:-3]}.h5")
 
         if output_dir.exists():
             warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
     else:
-        if output_dir:
-            output_dir_pt = Path(output_dir, f"{model_name}.pt")
-        else:
-            output_dir_pt = Path(f"{model_name}.pt")
+        output_dir_pt = Path(output_dir, f"{model_name}.pt")
 
         if output_dir_pt.exists():
             warnings.warn("The weight file already exists in this directory. The file will be overwritten.")
@@ -65,10 +61,7 @@ def main():
                     output.write(buffer)
                     loop.update(len(buffer))
 
-        if output_dir:
-            output_dir = Path(output_dir, f"{model_name}.h5")
-        else:
-            output_dir = Path(f"{model_name}.h5")
+        output_dir = Path(output_dir, f"{model_name}.h5")
 
         weights = torch.load(output_dir_pt)
 
@@ -94,12 +87,8 @@ def main():
         for key in weights['dims'].keys():
             group_1.create_dataset(f'{key}', data=weights['dims'][key], dtype=np.int32)
 
-        if compression != "None":
-            for key in weights['model_state_dict'].keys():
-                group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32), compression=compression)
-        else:
-            for key in weights['model_state_dict'].keys():
-                group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32))
+        for key in weights['model_state_dict'].keys():
+            group_2.create_dataset(f'{key}', data=weights['model_state_dict'][key].numpy().astype(np.float32), compression=compression)
 
 if __name__ == "__main__":
     main()
