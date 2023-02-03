@@ -68,15 +68,16 @@ class App {
 
         this.recording_audio = false;
     }
-    async onchangeInputAudioFile(event) {
+    onchangeInputAudioFile(event) {
         let file = this.input_audiofile.files[0]
         console.log(file);
         if (file.name.split('.').pop() == "json") {
-            file.text().then(JSON.parse).then(res => tf.tensor(res.mel)).then((res) => this.run_model(res)).then(res => console.log(res));
+            file.text().then(JSON.parse).then(res => tf.tensor(res.mel)).then((res) => this.run_model(res));
         }
         else {
-            const audio = await preprocessAudio(file);
-            this.run_model(audio).then( (res) =>this.print_model_result(res));
+            //const audio = await preprocessAudio(file).then((res) => this.run_model(res));
+            console.log(preprocessAudio(file).then((res) => this.run_model(res)));
+            //this.run_model(audio);
         }
     }
 
@@ -97,7 +98,7 @@ class App {
                 const audio = await preprocessAudio(file);
 
                 audio.print();
-                this.run_model(audio).then( (res) =>this.print_model_result(res))
+                this.run_model(audio);
 
             }
             this.rec.start();
@@ -111,30 +112,61 @@ class App {
 
     onchangeSelectModel(obj) {
         console.log("Select model :", obj.value);
-        this.current_model_name = obj.value;
+        this.setWModelName(obj.value);
+    }
+    setWModelName(modelName) {
+        this.current_model_name = modelName;
         this.modelReady = false;
         this.weightsDownloader.abort();
         let self = this;
         this.weightsDownloader.downloadModel(this.current_model_name).then((weights) => this.weightsReady(self, weights));
     }
     weightsReady(self, weights) {
-        self.weights = weights
-        self.whisper = new Whisper(self.weights.weights);
-        console.log("weightsReady ", this.current_model_name);
-        console.log(self.weights)
+        self.weights = weights;
+        tf.engine().startScope()
+        self.whisper = new Whisper(self.weights);
+        const status_text = `Model "${self.current_model_name}" ready!`;
+        console.log(status_text);
+        self.gui_model_status.innerHTML = status_text;
         self.modelReady = true;
     }
     async run_model(mel_audio) {
-        console.time("run_model");
-        console.timeLog("run_model", "Run whisper");
-        let result = this.whisper.decode(mel_audio);
-        console.timeLog("run_model", "Recognition completed");
-        console.timeEnd("run_model");
+        let result = null;
+        try {
+            console.time("run_model");
+            console.timeLog("run_model", "Run whisper");
+
+            let status_text = `Recognizing audio...`;
+            console.log(status_text);
+            this.gui_model_status.innerHTML = status_text;
+            this.gui_model_progressbar.MaterialProgress.setProgress(0)
+            this.gui_model_progressbar.MaterialProgress.setBuffer(90)
+            await new Promise(resolve => setTimeout(resolve, 200));
+            result = await tf.tidy(() => this.whisper.decode(mel_audio));
+            status_text = `Recognition completed`;
+            console.log(status_text);
+            this.gui_model_status.innerHTML = status_text;
+            this.gui_model_progressbar.MaterialProgress.setProgress(100)
+            this.gui_model_progressbar.MaterialProgress.setBuffer(0)
+            console.timeLog("run_model", status_text);
+            console.timeEnd("run_model");
+            this.print_model_result(result.text);
+        }
+        catch (err) {
+            console.error(err);
+            const status_text = `Recognize error`;
+            console.log(status_text);
+            this.gui_model_status.innerHTML = status_text;
+            this.print_model_result(status_text);
+            result = null;
+        }
+        tf.engine().endScope()
+        this.weightsReady(this,this.weights)
         return result;
     }
-    async print_model_result(decoding_result) {
-        console.log(decoding_result)
-        this.gui_model_output.innerText = decoding_result.text;
+    async print_model_result(text) {
+        console.log(text)
+        this.gui_model_output.innerText = text;
     }
 
 }

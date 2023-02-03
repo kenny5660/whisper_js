@@ -5,29 +5,10 @@ import { MaximumLikelihoodRanker } from './maximum_likehood_ranker.js';
 import { TensorFlowJSInference } from './tensorflow_inference';
 import { getTokenizer } from './tokenizer/tokenizer.js';
 
-class DecodingResult {
-	constructor(
-		{
-			audioFeatures,
-			language,
-			languageProbs = {},
-			tokens = new Array(),
-			text = '',
-			avgLogprob = null,
-			noSpeechProb = null,
-			temperature = null,
-			compressionRatio = null
-		} = {}
-	) {
-		this.audioFeatures = audioFeatures;
+export class DecodingResult {
+	constructor({ language, text = '' } = {}) {
 		this.language = language;
-		this.languageProbs = languageProbs;
-		this.tokens = tokens;
 		this.text = text;
-		this.avgLogprob = avgLogprob;
-		this.noSpeechProb = noSpeechProb;
-		this.temperature = temperature;
-		this.compressionRatio = compressionRatio;
 	}
 }
 
@@ -52,7 +33,7 @@ class SuppressTokens {
 	}
 }
 
-class DecodingTask {
+export class DecodingTask {
 	constructor(model, options) {
 		this.model = model;
 		let language = options.language ? options.language : 'en';
@@ -61,13 +42,12 @@ class DecodingTask {
 		this.tokenizer = tokenizer;
 		this.options = this.verifyOptions(options);
 
-		this.nGroup = options.beamSize ? options.beamSize : options.bestOf ? options.bestOf : 1;
+		this.nGroup = options.beamSize ? options.beamSize : 1; // temp === 0
 		this.nCtx = model.dims.get('n_text_ctx').value;
 		this.sampleLen = options.sampleLen ? options.sampleLen : Math.floor(this.nCtx / 2);
 
 		this.sotSequence = [ ...tokenizer.sotSequence ];
 		if (this.options.withoutTimestamps) {
-			// this.sotSequence = tokenizer.sotSequenceIncludingNotimestamps;
 			this.sotSequence = [ ...tokenizer.sotSequence, tokenizer.noTimestamps ];
 		}
 		this.initialTokens = this.getInitialTokens();
@@ -82,33 +62,16 @@ class DecodingTask {
 			this.decoder = new GreedyDecoder(options.temperature, tokenizer.eot);
 		}
 		this.logitFilters = [];
-		if (this.options.suppressBlank) {
-			//default is false
-		}
+
 		if (this.options.suppressTokens) {
 			this.logitFilters.push(new SuppressTokens(this.getSuppressTokens()));
-		}
-		if (!options.withoutTimestamps) {
-			//we set options.withoutTimestamps to false
-			// const precision = CHUNK_LENGTH / model.dims.nAudioCtx;
-			// let maxInitialTimestampIndex;
-			// if (options.maxInitialTimestamp) {
-			// 	maxInitialTimestampIndex = Math.round(this.options.maxInitialTimestamp / precision);
-			// }
-			// this.logitFilters.push(new ApplyTimestampRules(tokenizer, this.sampleBegin, maxInitialTimestampIndex));
 		}
 	}
 
 	verifyOptions(options) {
-		// if (options.beamSize !== null && options.bestOf !== null) {
-		// 	throw new Error("beam_size and best_of can't be given together");
-		// }
-		// if (options.temperature === 0) {
-		// 	if (options.bestOf !== null) {
-		// 		throw new Error('best_of with greedy sampling (T=0) is not compatible');
-		// 	}
-		// }
-
+		if (options.beamSize !== null && options.bestOf !== null) {
+			throw new Error("beam_size and best_of can't be given together");
+		}
 		if (options.patience !== null && options.beamSize === null) {
 			throw new Error('patience requires beam_size to be given');
 		}
@@ -122,14 +85,6 @@ class DecodingTask {
 
 	getInitialTokens() {
 		let tokens = [ ...this.sotSequence ];
-		let prefix = this.options.prefix;
-		let prompt = this.options.prompt;
-		if (prefix) {
-			// default prefix == None
-		}
-		if (prompt) {
-			// default prompt == None
-		}
 		return tokens;
 	}
 
@@ -159,7 +114,6 @@ class DecodingTask {
 
 	getAudioFeatures(mel) {
 		let audioFeatures;
-
 		if (
 			mel.shape[mel.shape.length - 2] === this.model.dims.get('n_audio_ctx').value &&
 			mel.shape[mel.shape.length - 1] === this.model.dims.get('n_audio_state').value
@@ -175,7 +129,7 @@ class DecodingTask {
 		let languages = Array(audioFeatures.shape[0]).fill(this.options.language);
 		let langTokens = [];
 		let langProbs = [];
-		if (!this.options.language || this.options.task === 'lang_id') {
+		if (!this.options.language) {
 			throw new Error('specify language');
 		}
 		return languages, langProbs;
@@ -194,16 +148,8 @@ class DecodingTask {
 					probsAtSot.push(logits.gather(j).gather(this.sotIndex).arraySync());
 				}
 				probsAtSot = tf.tensor(probsAtSot).cast('float32');
-				// let probsAtSot = logits([:, this.sotIndex ]).cast('float32');
-				probsAtSot = tf.layers.softmax({ axis: -1 }).apply(probsAtSot);
-				// probsAtSot is 2d now
-				// noSpeechProb = probsAtSot.slice([ 0, 0 ], [ probsAtSot.shape[0], this.tokenizer.noSpeech ]).arraySync();
+				probsAtSot = tf.softmax(probsAtSot);
 				let probsAtSotT = tf.transpose(probsAtSot);
-				// no_speech_probs = probs_at_sot[:, self.tokenizer.no_speech].tolist()
-				// let data = [];
-				// for (let j of this.tokenizer.noSpeech.arraySync()) {
-				// 	data.push(probsAtSotT.gather(j).arraySync());
-				// }
 				noSpeechProb = tf.transpose(probsAtSotT.gather(this.tokenizer.noSpeech)).arraySync();
 			}
 			logits = logits.gather(logits.shape[1] - 1, 1);
@@ -227,9 +173,6 @@ class DecodingTask {
 		let tokens = tf.tensor2d(Array(nAudio).fill(this.initialTokens));
 
 		let [ languages, languageProbs ] = this.detectLanguage(audioFeatures, tokens);
-		if (this.options.task === 'lang_id') {
-			//TODO
-		}
 		// TODO check shapes
 		audioFeatures = tf.tensor(Array(this.nGroup).fill(audioFeatures.arraySync()[0]));
 		tokens = tf.tensor(Array(this.nGroup).fill(tokens.arraySync()[0]));
@@ -237,10 +180,6 @@ class DecodingTask {
 		[ tokens, sumLogprobs, noSpeechProbs ] = this.mainLoop(audioFeatures, tokens);
 
 		audioFeatures = audioFeatures.gather(tf.range(0, audioFeatures.shape[0], this.nGroup, 'int32'));
-		// noSpeechProbs = tf.tensor(noSpeechProbs);
-		// noSpeechProbs = noSpeechProbs.gather(tf.range(0, noSpeechProbs.shape[0], this.nGroup, 'int32'));
-		// noSpeechProbs = noSpeechProbs.arraySync();
-
 		tokens = tokens.reshape([ nAudio, this.nGroup, -1 ]);
 		sumLogprobs = sumLogprobs.reshape([ nAudio, this.nGroup ]);
 
@@ -266,17 +205,25 @@ class DecodingTask {
 
 		let newTokens = new Array();
 		for (let i = 0; i < tokens.length; i++) {
-			let idx = Math.floor(selected[i]); //to int
+			let idx = Math.floor(selected[i]);
 			let t = tokens[i];
 			newTokens.push(t[idx]);
 		}
 
 		let texts = new Array();
+		const nonAlpha = '!.,?';
 		for (let i = 0; i < newTokens.length; i++) {
 			let t = newTokens[i];
 			let words = tokenizer.decode(t);
-
-			texts.push(words.map(x => x.trim()));
+			let string = '';
+			words.forEach((word) => {
+				if (nonAlpha.includes(word[0])) {
+					string += word.trim();
+				} else {
+					string = string + ' ' + word.trim();
+				}
+			});
+			texts.push(string.trim());
 		}
 
 		let results = new Array();
@@ -284,28 +231,14 @@ class DecodingTask {
 			const text = texts[i];
 			//const lang = languages[i];
 			const lang = 'en';
-			// const tokens = newTokens[i];
-			// const af = audioFeatures.gather(i);
-			// const lp = newAvgLogprobs[i];
-			// const nsp = noSpeechProbs[i];
-			const tokens = null;
-			const af = null;
-			const lp = null;
-			const nsp = null;
 			results.push(
 				new DecodingResult({
-					audioFeatures: af,
 					language: lang,
-					tokens: tokens,
-					text: text,
-					avgLogprob: lp,
-					noSpeechProb: nsp,
-					temperature: this.options.temperature
+					text: text
 				})
 			);
 		}
-
 		return results;
 	}
 }
-module.exports = { DecodingTask };
+// module.exports = { DecodingTask };
